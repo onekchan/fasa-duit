@@ -1,0 +1,4653 @@
+<!--
+  FASA Duit — Artifact skeleton
+  =============================
+  This file is authored for publication via the Artifact tool. When published,
+  the harness wraps it in <!doctype html><html><head>…</head><body>, so we do
+  NOT include those tags here. Put <title>, <style>, and the app markup at the
+  top of the file directly.
+
+  Runtime capabilities used (declared at publish time via Artifact `capabilities`):
+    - db    : per-user private subtree under data/users/me/…
+    - user  : Claude account sign-in; `me` resolves to the current user id
+
+  BEFORE first publish: load the `artifact-capabilities` skill and wire the real
+  db/user calls into the stubs marked TODO(capabilities) below.
+-->
+<title>FASA Duit</title>
+
+<!-- Google Fonts: warm serif for display + humanist sans for body -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  /* ---------- Design tokens (light) ---------- */
+  :root {
+    --bg:        #FBF6EE;
+    --surface:   #FFFFFF;
+    --card:      #F5EBDA;
+    --ink:       #3E2A1F;
+    --muted:     #7A6B5F;
+    --brand:     #C8553D;
+    --accent:    #6B8E5A;
+    --warning:   #D98E3A;
+    --danger:    #A03E2F;
+    --divider:   #E8DCC7;
+    --focus:     #C8553D;
+
+    --shadow-sm: 0 1px 2px rgba(62,42,31,.06);
+    --shadow-md: 0 1px 2px rgba(62,42,31,.06), 0 8px 24px rgba(62,42,31,.06);
+
+    --radius:    18px;
+    --radius-sm: 10px;
+
+    --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+    --font-body:    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+    color-scheme: light;
+  }
+
+  /* ---------- Design tokens (dark) ---------- */
+  /* Redefined in BOTH blocks so the manual toggle wins in either OS setting. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:      #1F1712;
+      --surface: #241B15;
+      --card:    #2A211B;
+      --ink:     #F5EBDA;
+      --muted:   #B8A897;
+      --brand:   #E07A64;
+      --accent:  #8FB37A;
+      --warning: #E8A85A;
+      --danger:  #C86454;
+      --divider: #3A2E24;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:      #1F1712;
+    --surface: #241B15;
+    --card:    #2A211B;
+    --ink:     #F5EBDA;
+    --muted:   #B8A897;
+    --brand:   #E07A64;
+    --accent:  #8FB37A;
+    --warning: #E8A85A;
+    --danger:  #C86454;
+    --divider: #3A2E24;
+    color-scheme: dark;
+  }
+
+  /* ---------- Base ---------- */
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+  h1, h2, h3 { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.01em; color: var(--ink); }
+  h1 { font-size: 28px; line-height: 1.15; margin: 0 0 4px; }
+  h2 { font-size: 20px; line-height: 1.2; margin: 0 0 12px; }
+  h3 { font-size: 16px; line-height: 1.25; margin: 0 0 8px; }
+  p  { margin: 0 0 8px; color: var(--ink); }
+  .muted { color: var(--muted); }
+
+  a, button { color: inherit; font: inherit; }
+  button {
+    background: var(--brand); color: #FFF6EC; border: 0; border-radius: var(--radius-sm);
+    padding: 10px 16px; cursor: pointer; font-weight: 600;
+    transition: filter 150ms ease, transform 150ms ease;
+  }
+  button:hover { filter: brightness(1.05); }
+  button:active { transform: translateY(1px); }
+  button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--divider); }
+  button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+    outline: 2px solid var(--focus); outline-offset: 2px;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--divider);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow-sm);
+  }
+  .card.elevated { box-shadow: var(--shadow-md); background: var(--surface); }
+
+  /* ---------- Shell layout: sidebar + main ---------- */
+  .shell {
+    min-height: 100vh;
+    /* 180px sidebar + 24px gutter — the gutter shows the page bg between
+       the rail and the content cards so the two never look joined. */
+    padding-left: 204px;
+    transition: padding-left 200ms ease;
+  }
+  .shell.no-sidebar { padding-left: 0; }
+  .sidebar {
+    /* Edge-to-edge rail flush with the viewport top/left/bottom. */
+    position: fixed; top: 0; left: 0;
+    width: 180px; height: 100vh;
+    padding: 22px 14px;
+    background: var(--card);
+    border-right: 1px solid var(--divider);
+    display: flex; flex-direction: column; gap: 18px;
+    /* Subtle right-side elevation — reads as a lifted rail without a floating card look */
+    box-shadow: 4px 0 20px rgba(62,42,31,.05);
+    /* Long menus scroll inside the rail without pushing anything else */
+    overflow-y: auto;
+    z-index: 10;
+  }
+  /* Dark-mode shadow: warmer + a touch stronger so the rail still lifts */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .sidebar {
+      box-shadow: 4px 0 24px rgba(0,0,0,.30);
+    }
+  }
+  :root[data-theme="dark"] .sidebar {
+    box-shadow: 4px 0 24px rgba(0,0,0,.30);
+  }
+  .sidebar .brand-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; padding: 4px 8px;
+  }
+  .sidebar .brand {
+    font-family: var(--font-display); font-weight: 700; font-size: 22px;
+    color: var(--brand); letter-spacing: -0.01em;
+  }
+  .sidebar .hide-btn {
+    background: transparent; color: var(--muted);
+    border: 1px solid var(--divider); border-radius: 8px;
+    padding: 6px; display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; cursor: pointer;
+    transition: color 150ms ease, background 150ms ease, border-color 150ms ease;
+  }
+  .sidebar .hide-btn:hover {
+    color: var(--ink); background: var(--surface); border-color: var(--brand);
+  }
+  .sidebar .hide-btn svg { width: 15px; height: 15px; }
+  .sidebar nav { display: flex; flex-direction: column; gap: 2px; }
+  .sidebar nav button {
+    background: transparent; color: var(--muted);
+    padding: 10px 12px; border-radius: var(--radius-sm);
+    font-weight: 500; text-align: left; width: 100%;
+    transition: background 150ms ease, color 150ms ease;
+  }
+  .sidebar nav button:hover { background: var(--surface); color: var(--ink); }
+  .sidebar nav button.active {
+    background: var(--surface); color: var(--ink);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .main {
+    /* Fill the remaining width so `main` stretches all the way to the
+       right edge of the viewport regardless of the wrapper's intrinsic size.
+       Inside, `.main > *` still enjoys the same comfortable measure via the
+       max-width on its wrapper below. */
+    min-width: 0;
+    width: 100%;
+    padding: 24px 28px 40px;
+    box-sizing: border-box;
+  }
+  .main-inner {
+    max-width: 1120px;
+    margin: 0 auto;
+  }
+
+  /* Top bar inside main: sidebar toggle on the left, actions on the right */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; margin-bottom: 20px;
+  }
+  .topbar .left, .topbar .right {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .topbar .brand-inline {
+    font-family: var(--font-display); font-weight: 700; font-size: 18px;
+    color: var(--brand); letter-spacing: -0.01em; margin-left: 4px;
+  }
+  /* Mobile brand is only for viewports where the sidebar is CSS-hidden. Above
+     the mobile breakpoint the sidebar carries the brand, so hide the duplicate. */
+  .topbar .brand-mobile { display: none; }
+  .icon-btn.ghost {
+    background: transparent; color: var(--ink);
+    border: 1px solid var(--divider);
+  }
+  .icon-btn.ghost:hover { background: var(--card); }
+
+  /* ---------- Mobile: hide sidebar, use bottom tab bar ---------- */
+  .bottomnav { display: none; }
+  @media (max-width: 720px) {
+    .shell { padding-left: 0; }
+    .sidebar { display: none; }
+    .main { padding: 16px 14px 88px; }
+    .topbar {
+      justify-content: space-between;
+    }
+    .topbar .brand-mobile {
+      display: block;
+      font-family: var(--font-display); font-weight: 700; font-size: 20px;
+      color: var(--brand); letter-spacing: -0.01em;
+    }
+    .bottomnav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      display: flex; justify-content: space-around;
+      background: var(--surface); border-top: 1px solid var(--divider);
+      padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
+      z-index: 20;
+    }
+    .bottomnav button {
+      background: transparent; color: var(--muted); padding: 8px 10px;
+      font-size: 12px; font-weight: 500; display: flex; flex-direction: column; align-items: center; gap: 2px;
+    }
+    .bottomnav button.active { color: var(--brand); }
+  }
+
+  /* ---------- Layout helpers ---------- */
+  .grid { display: grid; gap: 16px; }
+  .grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 720px) {
+    .grid.cols-3, .grid.cols-2 { grid-template-columns: 1fr; }
+  }
+
+  /* ---------- Meter (50/30/20) ---------- */
+  .meter { margin: 12px 0; }
+  .meter .track {
+    background: var(--divider); border-radius: 999px; height: 10px; overflow: hidden;
+  }
+  .meter .fill {
+    height: 100%; border-radius: 999px; background: var(--accent);
+    transition: width 200ms ease, background 200ms ease;
+  }
+  .meter.over .fill { background: var(--danger); }
+  .meter .row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .meter .row .lbl { font-weight: 600; }
+  .meter .row .val { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; }
+
+  /* Numbers everywhere are tabular for clean vertical alignment */
+  .num, .amount { font-variant-numeric: tabular-nums; }
+
+  /* Debug harness */
+  .debug-math { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+  .debug-math .pass { color: var(--accent); }
+  .debug-math .fail { color: var(--danger); font-weight: 700; }
+
+  /* Toast area */
+  .toast-region {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    display: flex; flex-direction: column; gap: 8px; z-index: 30;
+    pointer-events: none;
+  }
+  .toast {
+    background: var(--ink); color: var(--bg); padding: 10px 14px;
+    border-radius: var(--radius-sm); box-shadow: var(--shadow-md);
+    pointer-events: auto; font-size: 14px;
+  }
+
+  /* Prevent horizontal scroll — use `clip` (not `hidden`) so `position: sticky`
+     descendants (like the left sidebar) still stick to the viewport instead of
+     scrolling with the page. */
+  html, body { overflow-x: clip; }
+  body { margin: 0; }
+
+  /* ---------- Onboarding wizard ---------- */
+  .wiz { max-width: 640px; margin: 8px auto 0; }
+  .wiz .steps {
+    display: flex; gap: 6px; margin-bottom: 20px;
+  }
+  .wiz .steps .dot {
+    flex: 1; height: 6px; border-radius: 999px;
+    background: var(--divider); transition: background 200ms ease;
+  }
+  .wiz .steps .dot.done { background: var(--accent); }
+  .wiz .steps .dot.current { background: var(--brand); }
+  .wiz .step-label {
+    color: var(--muted); font-size: 13px; font-weight: 500;
+    margin-bottom: 4px; letter-spacing: 0.02em; text-transform: uppercase;
+  }
+  .wiz h1 { margin-bottom: 8px; }
+  .wiz .subhead { color: var(--muted); margin-bottom: 24px; }
+  .wiz .actions {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 12px; margin-top: 28px;
+  }
+  .wiz .actions .right { display: flex; gap: 10px; }
+  .wiz .skip {
+    background: transparent; color: var(--muted); padding: 8px 4px;
+    font-weight: 500; text-decoration: underline; text-underline-offset: 3px;
+  }
+  .wiz .skip:hover { color: var(--ink); }
+
+  .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  .field label { font-weight: 600; font-size: 14px; }
+  .field .hint { color: var(--muted); font-size: 13px; }
+  .field input, .field select {
+    background: var(--surface); color: var(--ink);
+    border: 1px solid var(--divider); border-radius: var(--radius-sm);
+    padding: 12px 14px; font: inherit; font-variant-numeric: tabular-nums;
+    transition: border-color 150ms ease;
+  }
+  .field input:focus, .field select:focus { border-color: var(--brand); outline: none; box-shadow: 0 0 0 3px rgba(200, 85, 61, 0.15); }
+  .money-input {
+    display: grid; grid-template-columns: auto 1fr; align-items: stretch;
+    border: 1px solid var(--divider); border-radius: var(--radius-sm); overflow: hidden;
+    background: var(--surface);
+  }
+  .money-input:focus-within { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(200, 85, 61, 0.15); }
+  .money-input .prefix {
+    display: flex; align-items: center; padding: 0 12px;
+    background: var(--card); color: var(--muted); font-weight: 600;
+    border-right: 1px solid var(--divider);
+  }
+  .money-input input { border: 0; box-shadow: none; }
+
+  .chips {
+    display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .chip {
+    background: var(--surface); color: var(--ink);
+    border: 1px solid var(--divider); border-radius: 999px;
+    padding: 8px 14px; font: inherit; font-size: 14px; font-weight: 500;
+    cursor: pointer; transition: all 150ms ease;
+  }
+  .chip:hover { border-color: var(--brand); }
+  .chip.selected {
+    background: var(--brand); color: #FFF6EC; border-color: var(--brand);
+  }
+
+  .accounts-list {
+    display: flex; flex-direction: column; gap: 8px; margin-top: 16px;
+  }
+  .accounts-list .row {
+    display: grid; grid-template-columns: 1fr auto auto;
+    gap: 10px; align-items: center;
+    background: var(--surface); border: 1px solid var(--divider);
+    border-radius: var(--radius-sm); padding: 10px 12px;
+  }
+  .accounts-list .row .name { font-weight: 500; }
+  .accounts-list .row .balance-input {
+    display: grid; grid-template-columns: auto 1fr;
+    border: 1px solid var(--divider); border-radius: var(--radius-sm); overflow: hidden;
+    background: var(--bg); width: 160px;
+  }
+  .accounts-list .row .balance-input .prefix {
+    padding: 6px 8px; background: var(--card); color: var(--muted);
+    font-size: 13px; border-right: 1px solid var(--divider);
+  }
+  .accounts-list .row .balance-input input {
+    border: 0; padding: 6px 8px; font-size: 14px; background: transparent; color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .accounts-list .row .remove {
+    background: transparent; color: var(--muted); padding: 4px 8px;
+    font-size: 18px; line-height: 1;
+  }
+  .accounts-list .row .remove:hover { color: var(--danger); }
+
+  .cat-preview {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;
+  }
+  @media (max-width: 720px) { .cat-preview { grid-template-columns: 1fr; } }
+  .cat-preview .bucket-col h4 {
+    margin: 0 0 8px; font-size: 13px; letter-spacing: 0.04em;
+    text-transform: uppercase; color: var(--muted); font-family: var(--font-body);
+  }
+  .cat-preview .bucket-col ul {
+    list-style: none; padding: 0; margin: 0;
+    display: flex; flex-direction: column; gap: 4px;
+    font-size: 14px;
+  }
+  .cat-preview .bucket-col li { color: var(--ink); }
+  .bucket-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    font-size: 12px; font-weight: 600;
+  }
+  .bucket-badge.needs   { background: rgba(107, 142, 90, 0.15); color: var(--accent); }
+  .bucket-badge.wants   { background: rgba(217, 142, 58, 0.18); color: var(--warning); }
+  .bucket-badge.savings { background: rgba(200, 85, 61, 0.15); color: var(--brand); }
+
+  /* ---------- Quick-add slide-down ---------- */
+  .quickadd {
+    background: var(--card); border: 1px solid var(--divider);
+    border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px;
+    box-shadow: var(--shadow-sm);
+    animation: slideDown 180ms ease;
+  }
+  @keyframes slideDown { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+  .quickadd .qa-row {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch;
+  }
+  /* Sensible min-widths + flex growth so fields share space and wrap gracefully */
+  .quickadd .qa-row .type-toggle { flex: 0 0 auto; }
+  .quickadd .qa-row .amount      { flex: 1 1 140px; min-width: 130px; }
+  .quickadd .qa-row select       { flex: 1 1 160px; min-width: 130px; }
+  .quickadd .qa-row .merchant    { flex: 2 1 200px; min-width: 160px; }
+  .quickadd .qa-row .save-btn    { flex: 0 0 auto; }
+  .quickadd .qa-row .close-btn   { flex: 0 0 auto; }
+  @media (max-width: 720px) {
+    .quickadd .qa-row .amount,
+    .quickadd .qa-row select,
+    .quickadd .qa-row .merchant { flex-basis: 100%; }
+  }
+  .quickadd .type-toggle {
+    display: inline-flex; background: var(--surface); border: 1px solid var(--divider);
+    border-radius: var(--radius-sm); overflow: hidden;
+  }
+  .quickadd .type-toggle button {
+    background: transparent; color: var(--muted); padding: 0 12px;
+    font-size: 13px; font-weight: 600; border-radius: 0;
+  }
+  .quickadd .type-toggle button.active { color: var(--ink); background: var(--card); }
+  .quickadd .type-toggle button.active.expense { color: var(--brand); }
+  .quickadd .type-toggle button.active.income  { color: var(--accent); }
+  .quickadd input, .quickadd select {
+    background: var(--surface); color: var(--ink);
+    border: 1px solid var(--divider); border-radius: var(--radius-sm);
+    padding: 10px 12px; font: inherit; font-variant-numeric: tabular-nums;
+  }
+  .quickadd input:focus, .quickadd select:focus {
+    outline: none; border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(200, 85, 61, 0.15);
+  }
+  .quickadd .amount { text-align: right; }
+  .quickadd .esc-hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  .quickadd .esc-hint kbd {
+    background: var(--surface); border: 1px solid var(--divider); border-radius: 4px;
+    padding: 1px 6px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; color: var(--ink);
+  }
+
+  /* ---------- Transactions ledger ---------- */
+  .ledger-toolbar {
+    display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap;
+  }
+  .ledger-toolbar input[type="search"], .ledger-toolbar select {
+    background: var(--surface); color: var(--ink);
+    border: 1px solid var(--divider); border-radius: var(--radius-sm);
+    padding: 8px 12px; font: inherit;
+  }
+  .ledger-toolbar input[type="search"] { min-width: 220px; flex: 1; }
+  .ledger-toolbar .spacer { flex: 1; }
+
+  .ledger-table { overflow-x: auto; border-radius: var(--radius); }
+  .ledger-table table {
+    width: 100%; border-collapse: collapse; background: var(--surface);
+    border: 1px solid var(--divider); border-radius: var(--radius);
+  }
+  .ledger-table th, .ledger-table td {
+    padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--divider);
+    font-size: 14px;
+  }
+  .ledger-table th {
+    color: var(--muted); font-weight: 600; font-size: 12px;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    background: var(--card);
+  }
+  .ledger-table tr:last-child td { border-bottom: 0; }
+  .ledger-table td.amt {
+    text-align: right; font-variant-numeric: tabular-nums; font-weight: 600;
+  }
+  .ledger-table td.amt.expense { color: var(--ink); }
+  .ledger-table td.amt.income  { color: var(--accent); }
+  .ledger-table tr:hover td { background: var(--card); }
+  .ledger-table .del-btn {
+    background: transparent; color: var(--muted); padding: 4px 8px;
+    font-size: 16px;
+  }
+  .ledger-table .del-btn:hover { color: var(--danger); }
+  .ledger-table td.sample-tag {
+    color: var(--muted); font-size: 11px; letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .empty {
+    text-align: center; padding: 48px 20px;
+  }
+  .empty .illus {
+    width: 96px; height: 96px; margin: 0 auto 16px;
+    color: var(--muted); opacity: 0.7;
+  }
+  .empty h3 { margin-bottom: 6px; }
+  .empty p  { color: var(--muted); margin-bottom: 20px; }
+  .empty .empty-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  .toast .undo-btn {
+    margin-left: 12px; background: transparent; color: var(--brand);
+    padding: 0; text-decoration: underline; text-underline-offset: 3px;
+    font-weight: 600; font-size: 14px;
+  }
+
+  /* ---------- Icon button + tooltip ---------- */
+  .icon-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; padding: 0;
+    background: var(--brand); color: #FFF6EC;
+    border: 0; border-radius: var(--radius-sm);
+    cursor: pointer; transition: filter 150ms ease, transform 150ms ease;
+  }
+  .icon-btn:hover { filter: brightness(1.05); }
+  .icon-btn:active { transform: translateY(1px); }
+  .icon-btn svg { width: 18px; height: 18px; }
+
+  .tip { position: relative; display: inline-flex; }
+  .tip::after {
+    content: attr(data-tip);
+    position: absolute; top: calc(100% + 8px); right: 0;
+    background: var(--ink); color: var(--bg);
+    padding: 6px 10px; border-radius: 8px;
+    font-size: 12px; font-weight: 500; white-space: nowrap;
+    opacity: 0; pointer-events: none;
+    transform: translateY(-4px);
+    transition: opacity 150ms ease, transform 150ms ease;
+    z-index: 40;
+    box-shadow: var(--shadow-md);
+  }
+  .tip::before {
+    content: ''; position: absolute; top: calc(100% + 3px); right: 14px;
+    border: 5px solid transparent; border-bottom-color: var(--ink);
+    opacity: 0; transition: opacity 150ms ease;
+    z-index: 41;
+  }
+  .tip:hover::after, .tip:focus-within::after,
+  .tip:hover::before, .tip:focus-within::before {
+    opacity: 1; transform: translateY(0);
+  }
+  .tip kbd {
+    background: rgba(255,255,255,0.15); border-radius: 4px;
+    padding: 0 5px; margin-left: 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+  }
+
+  /* Section header row (Transactions view) */
+  .view-header {
+    display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px;
+    gap: 12px; flex-wrap: wrap;
+  }
+  .view-header h2 { margin-bottom: 0; }
+  .view-header .actions { display: flex; gap: 8px; }
+
+  /* ---------- Settings ---------- */
+  .settings-stack { display: flex; flex-direction: column; gap: 16px; }
+  .settings-section { padding: 24px; }
+  .settings-section h3 { margin-bottom: 4px; }
+  .settings-section .section-sub { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+
+  .split-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  }
+  @media (max-width: 720px) { .split-grid { grid-template-columns: 1fr; } }
+  .split-status {
+    display: flex; align-items: center; gap: 8px; margin-top: 12px;
+    font-size: 13px;
+  }
+  .split-status .ok      { color: var(--accent); font-weight: 600; }
+  .split-status .off     { color: var(--warning); font-weight: 600; }
+  .split-status .over    { color: var(--danger); font-weight: 600; }
+
+  .seg-toggle {
+    display: inline-flex; background: var(--surface); border: 1px solid var(--divider);
+    border-radius: var(--radius-sm); overflow: hidden; padding: 3px;
+    gap: 2px;
+  }
+  .seg-toggle button {
+    background: transparent; color: var(--muted); padding: 6px 12px;
+    font-size: 13px; font-weight: 600; border-radius: calc(var(--radius-sm) - 3px);
+  }
+  .seg-toggle button.active { background: var(--card); color: var(--ink); box-shadow: var(--shadow-sm); }
+
+  .mgr-list { display: flex; flex-direction: column; gap: 6px; }
+  .mgr-bucket-header {
+    display: flex; align-items: center; gap: 8px;
+    margin: 16px 0 8px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--divider);
+  }
+  .mgr-bucket-header:first-child { margin-top: 0; }
+  .mgr-bucket-header h4 {
+    margin: 0; font-size: 13px; letter-spacing: 0.04em;
+    text-transform: uppercase; color: var(--muted); font-family: var(--font-body);
+    font-weight: 600;
+  }
+  .mgr-bucket-header .count { color: var(--muted); font-size: 13px; margin-left: auto; }
+
+  .mgr-row {
+    display: grid; grid-template-columns: 1fr auto auto auto;
+    gap: 8px; align-items: center;
+    background: var(--surface); border: 1px solid var(--divider);
+    border-radius: var(--radius-sm); padding: 8px 12px;
+  }
+  .mgr-row.archived { opacity: 0.55; }
+  .mgr-row input[type="text"] {
+    background: transparent; color: var(--ink); border: 0;
+    padding: 4px 0; font: inherit; font-weight: 500;
+    min-width: 0;
+  }
+  .mgr-row input[type="text"]:focus {
+    outline: none;
+    background: var(--bg); border-radius: 4px; padding: 4px 8px;
+  }
+  .mgr-row .bucket-pick,
+  .mgr-row .type-pick {
+    background: var(--bg); color: var(--ink);
+    border: 1px solid var(--divider); border-radius: 6px;
+    padding: 4px 8px; font-size: 13px;
+  }
+  .mgr-row .balance-cell {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--bg); border: 1px solid var(--divider); border-radius: 6px;
+    padding: 2px 8px;
+  }
+  .mgr-row .balance-cell .prefix {
+    color: var(--muted); font-size: 12px; font-weight: 600;
+  }
+  .mgr-row .balance-cell input {
+    background: transparent; border: 0; padding: 4px 0;
+    font: inherit; font-variant-numeric: tabular-nums;
+    width: 90px; text-align: right;
+  }
+  .mgr-row .balance-cell input:focus { outline: none; }
+  .mgr-row .icon-mini {
+    background: transparent; color: var(--muted); padding: 6px;
+    border-radius: 6px; display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px;
+  }
+  .mgr-row .icon-mini:hover { background: var(--card); color: var(--ink); }
+  .mgr-row .icon-mini.danger:hover { color: var(--danger); background: var(--card); }
+  .mgr-row .icon-mini svg { width: 15px; height: 15px; }
+
+  .add-row {
+    display: grid; grid-template-columns: 1fr auto auto; gap: 8px; margin-top: 12px;
+    background: var(--card); border: 1px dashed var(--divider);
+    border-radius: var(--radius-sm); padding: 10px 12px;
+  }
+  .add-row input, .add-row select {
+    background: var(--surface); color: var(--ink);
+    border: 1px solid var(--divider); border-radius: 6px;
+    padding: 6px 10px; font: inherit;
+  }
+  .add-row input:focus, .add-row select:focus {
+    outline: none; border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(200, 85, 61, 0.15);
+  }
+
+  .setting-row {
+    display: grid; grid-template-columns: 1fr auto; gap: 20px;
+    align-items: center; padding: 12px 0;
+    border-top: 1px solid var(--divider);
+  }
+  .setting-row:first-child { border-top: 0; padding-top: 0; }
+  .setting-row .label-col .name { font-weight: 600; }
+  .setting-row .label-col .hint { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  /* ---------- Debts ---------- */
+  .debts-hero {
+    display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center;
+    margin-bottom: 16px;
+  }
+  .debts-hero .totals-inline {
+    display: flex; gap: 20px; flex-wrap: wrap;
+  }
+  .debts-hero .totals-inline .kv .k {
+    color: var(--muted); font-size: 12px; text-transform: uppercase;
+    letter-spacing: 0.05em; font-weight: 600;
+  }
+  .debts-hero .totals-inline .kv .v {
+    font-family: var(--font-display); font-weight: 600; font-size: 20px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .strategy-primer {
+    background: var(--card); border: 1px solid var(--divider);
+    border-radius: var(--radius); padding: 18px 20px; margin-bottom: 16px;
+  }
+  .strategy-primer h4 {
+    margin: 0 0 6px; font-family: var(--font-display); font-size: 15px; color: var(--ink);
+  }
+  .strategy-primer p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+  .strategy-primer .grid2 {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+  }
+  @media (max-width: 720px) { .strategy-primer .grid2 { grid-template-columns: 1fr; } }
+  .strategy-primer .grid2 .col .badge {
+    display: inline-block; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+    font-weight: 700; padding: 2px 8px; border-radius: 999px; margin-right: 6px;
+  }
+  .strategy-primer .grid2 .col.snowball .badge { background: rgba(107,142,90,0.18); color: var(--accent); }
+  .strategy-primer .grid2 .col.avalanche .badge { background: rgba(200,85,61,0.15); color: var(--brand); }
+
+  .extra-slider {
+    background: var(--card); border: 1px solid var(--divider);
+    border-radius: var(--radius); padding: 18px 20px; margin-bottom: 16px;
+  }
+  .extra-slider .row1 {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .extra-slider .row1 .title {
+    font-weight: 600; font-size: 15px; color: var(--ink);
+  }
+  .extra-slider .row1 .hint { color: var(--muted); font-size: 13px; }
+  .extra-slider .row2 { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; }
+  @media (max-width: 720px) { .extra-slider .row2 { grid-template-columns: 1fr; } }
+
+  .extra-slider input[type="range"] {
+    width: 100%;
+    -webkit-appearance: none; appearance: none;
+    background: transparent;
+  }
+  .extra-slider input[type="range"]::-webkit-slider-runnable-track {
+    height: 6px; background: var(--divider); border-radius: 999px;
+  }
+  .extra-slider input[type="range"]::-moz-range-track {
+    height: 6px; background: var(--divider); border-radius: 999px;
+  }
+  .extra-slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--brand); border: 2px solid var(--surface);
+    box-shadow: var(--shadow-sm);
+    margin-top: -7px; cursor: pointer;
+  }
+  .extra-slider input[type="range"]::-moz-range-thumb {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--brand); border: 2px solid var(--surface);
+    box-shadow: var(--shadow-sm); cursor: pointer;
+  }
+  .extra-slider .amount-cell {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--surface); border: 1px solid var(--divider); border-radius: var(--radius-sm);
+    padding: 2px 10px;
+  }
+  .extra-slider .amount-cell .prefix { color: var(--muted); font-weight: 600; }
+  .extra-slider .amount-cell input {
+    background: transparent; border: 0; padding: 8px 4px;
+    width: 100px; text-align: right; font: inherit;
+    font-variant-numeric: tabular-nums;
+  }
+  .extra-slider .amount-cell input:focus { outline: none; }
+
+  .strategy-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;
+  }
+  @media (max-width: 900px) { .strategy-grid { grid-template-columns: 1fr; } }
+  .strategy-card { padding: 20px; position: relative; }
+  .strategy-card.winner { border-color: var(--brand); box-shadow: 0 1px 2px rgba(200,85,61,.08), 0 12px 32px rgba(200,85,61,.08); }
+  .strategy-card .head {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+  }
+  .strategy-card .head .title {
+    font-family: var(--font-display); font-weight: 600; font-size: 18px;
+    color: var(--ink); margin: 0;
+  }
+  .strategy-card .head .winner-pill {
+    margin-left: auto; padding: 3px 10px; border-radius: 999px;
+    background: var(--brand); color: #FFF6EC; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .strategy-card .head .badge {
+    display: inline-block; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+    font-weight: 700; padding: 2px 8px; border-radius: 999px;
+  }
+  .strategy-card .head .badge.snowball { background: rgba(107,142,90,0.18); color: var(--accent); }
+  .strategy-card .head .badge.avalanche { background: rgba(200,85,61,0.15); color: var(--brand); }
+
+  .strategy-card .stats {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; margin-top: 10px;
+  }
+  .strategy-card .stats .k {
+    color: var(--muted); font-size: 12px; text-transform: uppercase;
+    letter-spacing: 0.05em; font-weight: 600; margin-bottom: 3px;
+  }
+  .strategy-card .stats .v {
+    font-family: var(--font-display); font-weight: 600; font-size: 18px;
+    font-variant-numeric: tabular-nums; color: var(--ink);
+  }
+
+  .savings-callout {
+    background: var(--card); border: 1px solid var(--divider);
+    border-radius: var(--radius); padding: 14px 18px; margin-bottom: 16px;
+    display: flex; gap: 12px; align-items: center;
+  }
+  .savings-callout .amt {
+    font-family: var(--font-display); font-weight: 700;
+    color: var(--brand); font-size: 22px;
+    font-variant-numeric: tabular-nums;
+  }
+  .savings-callout .msg { color: var(--muted); font-size: 14px; flex: 1; }
+
+  .debt-list { display: flex; flex-direction: column; gap: 12px; }
+  .debt-row {
+    background: var(--surface); border: 1px solid var(--divider);
+    border-radius: var(--radius); padding: 16px 18px;
+  }
+  .debt-row .head {
+    display: grid; grid-template-columns: 1fr auto auto auto auto; gap: 12px; align-items: center;
+  }
+  @media (max-width: 720px) {
+    .debt-row .head { grid-template-columns: 1fr auto; row-gap: 8px; }
+    .debt-row .head > .val { grid-column: span 2; }
+  }
+  .debt-row .name { font-weight: 600; font-size: 15px; }
+  .debt-row .type { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .debt-row .val { text-align: right; font-variant-numeric: tabular-nums; }
+  .debt-row .val .k {
+    color: var(--muted); font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.05em; font-weight: 600; margin-bottom: 2px;
+  }
+  .debt-row .val .v { font-weight: 600; }
+  .debt-row .actions { display: flex; gap: 4px; }
+
+  .amort-toggle {
+    background: transparent; color: var(--brand); padding: 4px 0;
+    font-size: 13px; font-weight: 600; margin-top: 10px;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .amort-toggle:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  .amort-table {
+    margin-top: 12px; overflow-x: auto;
+    background: var(--bg); border: 1px solid var(--divider);
+    border-radius: var(--radius-sm);
+  }
+  .amort-table table { width: 100%; border-collapse: collapse; }
+  .amort-table th, .amort-table td {
+    padding: 8px 12px; text-align: right; font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    border-bottom: 1px solid var(--divider);
+  }
+  .amort-table th:first-child, .amort-table td:first-child { text-align: left; }
+  .amort-table th {
+    color: var(--muted); font-weight: 600; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    background: var(--card);
+  }
+  .amort-table tr:last-child td { border-bottom: 0; }
+  .amort-table .gap-row td {
+    background: var(--card); color: var(--muted); text-align: center; font-size: 12px;
+  }
+
+  /* Debt editor uses same class family as fund editor */
+  .debt-editor .fe-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 720px) { .debt-editor .fe-row { grid-template-columns: 1fr; } }
+  .debt-editor .actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+
+  /* ---------- Sinking funds ---------- */
+  .fund-totals {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 720px) { .fund-totals { grid-template-columns: 1fr; } }
+  .fund-totals .stat {
+    background: var(--card); border: 1px solid var(--divider);
+    border-radius: var(--radius); padding: 16px 18px;
+  }
+  .fund-totals .stat .label {
+    color: var(--muted); font-size: 12px; text-transform: uppercase;
+    letter-spacing: 0.06em; font-weight: 600; margin-bottom: 6px;
+  }
+  .fund-totals .stat .value {
+    font-family: var(--font-display); font-weight: 600; font-size: 22px;
+    color: var(--ink); font-variant-numeric: tabular-nums;
+  }
+
+  .fund-list { display: grid; gap: 16px; grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 900px) { .fund-list { grid-template-columns: 1fr; } }
+
+  .fund-card { padding: 20px; }
+  .fund-card .head {
+    display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px;
+  }
+  .fund-card .head .icon-wrap {
+    width: 42px; height: 42px; border-radius: 12px;
+    background: var(--surface); border: 1px solid var(--divider);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--brand); flex-shrink: 0;
+  }
+  .fund-card .head .icon-wrap svg { width: 20px; height: 20px; }
+  .fund-card .head .name {
+    font-family: var(--font-display); font-weight: 600; font-size: 18px;
+    color: var(--ink); margin: 0;
+  }
+  .fund-card .head .meta {
+    color: var(--muted); font-size: 13px; margin-top: 2px;
+  }
+  .fund-card .head .actions {
+    margin-left: auto; display: flex; gap: 4px;
+  }
+  .fund-card .head .actions .icon-mini svg { width: 16px; height: 16px; }
+
+  .fund-card .progress-track {
+    background: var(--divider); border-radius: 999px; height: 8px; overflow: hidden;
+    margin: 12px 0 8px;
+  }
+  .fund-card .progress-fill {
+    height: 100%; border-radius: 999px; background: var(--accent);
+    transition: width 250ms ease, background 200ms ease;
+  }
+  .fund-card.status-behind .progress-fill { background: var(--warning); }
+  .fund-card.status-ahead .progress-fill  { background: var(--accent); }
+  .fund-card.status-done .progress-fill   { background: var(--accent); }
+
+  .fund-card .amounts {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-variant-numeric: tabular-nums;
+  }
+  .fund-card .amounts .saved  { font-weight: 700; color: var(--ink); }
+  .fund-card .amounts .target { color: var(--muted); font-size: 13px; }
+
+  .fund-card .stats-row {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;
+    margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--divider);
+  }
+  .fund-card .stats-row .stat .lbl {
+    color: var(--muted); font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.05em; font-weight: 600; margin-bottom: 4px;
+  }
+  .fund-card .stats-row .stat .val {
+    font-weight: 600; font-size: 14px; color: var(--ink); font-variant-numeric: tabular-nums;
+  }
+
+  .fund-card .footer {
+    display: flex; gap: 8px; margin-top: 16px;
+  }
+  .fund-card .footer .status-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 999px;
+    font-size: 12px; font-weight: 600;
+  }
+  .fund-card .footer .status-badge.ontrack { background: rgba(107,142,90,0.15); color: var(--accent); }
+  .fund-card .footer .status-badge.behind  { background: rgba(217,142,58,0.18); color: var(--warning); }
+  .fund-card .footer .status-badge.ahead   { background: rgba(107,142,90,0.15); color: var(--accent); }
+  .fund-card .footer .status-badge.done    { background: rgba(200,85,61,0.15);  color: var(--brand); }
+  .fund-card .footer .push-right { margin-left: auto; }
+
+  .contrib-log {
+    margin-top: 14px; padding: 12px 14px;
+    background: var(--card); border: 1px solid var(--divider);
+    border-radius: var(--radius-sm);
+  }
+  .contrib-log h5 {
+    margin: 0 0 8px; font-size: 12px; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--muted); font-weight: 600;
+  }
+  .contrib-log ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+  .contrib-log li {
+    display: flex; justify-content: space-between; font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+  .contrib-log li .date { color: var(--muted); }
+  .contrib-log li .del {
+    background: transparent; color: var(--muted); padding: 0 6px; margin-left: 8px;
+  }
+  .contrib-log li .del:hover { color: var(--danger); }
+  .contrib-log .add-contrib {
+    display: grid; grid-template-columns: 1fr auto auto; gap: 6px; margin-top: 10px;
+  }
+  .contrib-log .add-contrib input {
+    background: var(--surface); color: var(--ink);
+    border: 1px solid var(--divider); border-radius: 6px;
+    padding: 6px 10px; font: inherit; font-variant-numeric: tabular-nums;
+  }
+  .contrib-log .add-contrib input:focus {
+    outline: none; border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(200,85,61,0.15);
+  }
+
+  /* Fund editor (inline card at top of Funds view) */
+  .fund-editor { padding: 20px; }
+  .fund-editor .fe-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  }
+  @media (max-width: 720px) { .fund-editor .fe-row { grid-template-columns: 1fr; } }
+  .fund-editor .icon-picker {
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .fund-editor .icon-picker .icon-opt {
+    width: 34px; height: 34px; border-radius: 8px;
+    background: var(--surface); border: 1px solid var(--divider);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--muted); cursor: pointer;
+    transition: all 150ms ease;
+  }
+  .fund-editor .icon-picker .icon-opt:hover { color: var(--ink); border-color: var(--brand); }
+  .fund-editor .icon-picker .icon-opt.selected {
+    background: var(--brand); color: #FFF6EC; border-color: var(--brand);
+  }
+  .fund-editor .icon-picker .icon-opt svg {
+    width: 18px; height: 18px;
+    flex-shrink: 0; display: block;
+  }
+
+  .fund-editor .actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+
+  /* Dashboard sinking-fund nudge */
+  .fund-nudge {
+    background: var(--card); border: 1px solid var(--divider);
+    border-radius: var(--radius); padding: 16px 18px;
+    display: flex; gap: 14px; align-items: center;
+  }
+  .fund-nudge .icon-wrap {
+    width: 40px; height: 40px; border-radius: 12px;
+    background: var(--surface); border: 1px solid var(--divider);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--brand); flex-shrink: 0;
+  }
+  .fund-nudge .icon-wrap svg { width: 18px; height: 18px; }
+  .fund-nudge .text { flex: 1; }
+  .fund-nudge .text .name { font-weight: 600; color: var(--ink); }
+  .fund-nudge .text .msg { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+  /* ---------- Expense distribution (dashboard) ---------- */
+  .dist-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 900px) { .dist-grid { grid-template-columns: 1fr; } }
+
+  .range-toggle {
+    display: inline-flex; background: var(--surface); border: 1px solid var(--divider);
+    border-radius: var(--radius-sm); padding: 3px; gap: 2px;
+    flex-wrap: wrap;
+  }
+  .range-toggle button {
+    background: transparent; color: var(--muted); padding: 6px 10px;
+    font-size: 13px; font-weight: 600;
+    border-radius: calc(var(--radius-sm) - 3px);
+  }
+  .range-toggle button.active {
+    background: var(--card); color: var(--ink); box-shadow: var(--shadow-sm);
+  }
+
+  .donut-wrap { position: relative; height: 260px; }
+  .donut-center {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    pointer-events: none; text-align: center;
+  }
+  .donut-center .total {
+    font-family: var(--font-display); font-weight: 600; font-size: 24px;
+    color: var(--ink); font-variant-numeric: tabular-nums;
+  }
+  .donut-center .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+  .cat-rank {
+    display: flex; flex-direction: column; gap: 8px;
+    margin-top: 12px;
+  }
+  .cat-rank .rank-row {
+    display: grid; grid-template-columns: 12px 1fr auto auto; gap: 10px;
+    align-items: center; cursor: pointer;
+    padding: 6px 6px; border-radius: 8px;
+    transition: background 150ms ease;
+  }
+  .cat-rank .rank-row:hover { background: var(--card); }
+  .cat-rank .rank-row .swatch {
+    width: 10px; height: 10px; border-radius: 3px;
+  }
+  .cat-rank .rank-row .name { font-weight: 500; font-size: 14px; color: var(--ink); }
+  .cat-rank .rank-row .amt {
+    font-variant-numeric: tabular-nums; font-weight: 600; font-size: 14px; color: var(--ink);
+  }
+  .cat-rank .rank-row .pct {
+    font-variant-numeric: tabular-nums; font-size: 12px; color: var(--muted);
+    min-width: 40px; text-align: right;
+  }
+
+  .merchant-list { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; }
+  .merchant-list .m-row {
+    display: grid; grid-template-columns: 1fr auto; gap: 10px;
+    align-items: center; padding: 8px 6px; border-radius: 8px;
+    cursor: pointer; transition: background 150ms ease;
+  }
+  .merchant-list .m-row:hover { background: var(--card); }
+  .merchant-list .m-row .name { font-weight: 500; font-size: 14px; }
+  .merchant-list .m-row .amt {
+    font-variant-numeric: tabular-nums; font-weight: 600; font-size: 14px;
+  }
+
+  .recharts-tooltip-wrapper { outline: none; }
+  .rchart-tip {
+    background: var(--ink); color: var(--bg);
+    padding: 8px 12px; border-radius: 8px;
+    box-shadow: var(--shadow-md); font-size: 13px;
+  }
+  .rchart-tip .name { font-weight: 600; margin-bottom: 2px; }
+  .rchart-tip .val { font-variant-numeric: tabular-nums; }
+
+  /* Reset when Recharts is inside a dark theme card */
+  .recharts-wrapper text { fill: var(--muted); font-family: var(--font-body); font-size: 12px; }
+
+  .setting-row select, .setting-row .money-input {
+    min-width: 220px;
+  }
+  /* Style bare selects and text inputs inside Settings to match the rest of the app */
+  .setting-row select,
+  .setting-row input[type="text"],
+  .setting-row input[type="number"] {
+    background: var(--surface); color: var(--ink);
+    border: 1px solid var(--divider); border-radius: var(--radius-sm);
+    padding: 10px 12px; font: inherit; font-variant-numeric: tabular-nums;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+  }
+  .setting-row select:focus,
+  .setting-row input[type="text"]:focus,
+  .setting-row input[type="number"]:focus {
+    outline: none; border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(200, 85, 61, 0.15);
+  }
+  /* When the input is inside a .money-input group, the group owns the border —
+     let the input be a plain field again so RM + amount read as one control. */
+  .setting-row .money-input input[type="text"],
+  .setting-row .money-input input[type="number"] {
+    background: transparent;
+    border: 0; border-radius: 0;
+    box-shadow: none;
+    padding: 10px 12px;
+  }
+  .setting-row .money-input input:focus { box-shadow: none; border: 0; }
+</style>
+
+<!-- Root -->
+<div id="root"></div>
+<div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+<!-- Libraries: React 18 + ReactDOM 18 + Recharts (UMD, pinned) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js" crossorigin></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js" crossorigin></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.7/Recharts.js" crossorigin></script>
+
+<script>
+/* =========================================================================
+ * money.js — integer sen arithmetic + formatting
+ * All monetary values are integers in sen (1 RM = 100 sen).
+ * Never use JS floats for money. Rounding is banker's, applied at display only.
+ * ========================================================================= */
+const money = (() => {
+  const isInt = (n) => Number.isInteger(n);
+
+  const add = (...sens) => sens.reduce((a, b) => a + b, 0);
+  const subtract = (a, b) => a - b;
+
+  // multiply sen by a scalar (e.g. tax rate). Uses banker's rounding.
+  const multiply = (sen, scalar) => bankersRound(sen * scalar);
+  // divide sen by an integer divisor; distributes remainder to `remainderTo` (0..divisor-1)
+  const divide = (sen, divisor) => bankersRound(sen / divisor);
+  const percent = (sen, pctBps /* 0-10000 */) => bankersRound(sen * pctBps / 10000);
+
+  // Banker's / half-to-even rounding for a Number → Integer
+  function bankersRound(x) {
+    const floor = Math.floor(x);
+    const diff  = x - floor;
+    if (diff > 0.5) return floor + 1;
+    if (diff < 0.5) return floor;
+    // exactly .5 → round to even
+    return (floor % 2 === 0) ? floor : floor + 1;
+  }
+
+  // Split a total into `parts` shares whose sum EXACTLY equals `total_sen`.
+  // Any rounding remainder goes into the largest share (or index 0 if all equal).
+  function splitExact(total_sen, weights /* e.g. [50, 30, 20] */) {
+    const wsum = weights.reduce((a, b) => a + b, 0);
+    const raw  = weights.map(w => Math.floor(total_sen * w / wsum));
+    const used = raw.reduce((a, b) => a + b, 0);
+    let remainder = total_sen - used;
+    // Sink remainder into the largest weight (ties → lowest index)
+    let biggest = 0;
+    for (let i = 1; i < weights.length; i++) if (weights[i] > weights[biggest]) biggest = i;
+    raw[biggest] += remainder;
+    return raw;
+  }
+
+  // Parse "RM 1,234.56" or "1234.56" → sen (integer). Returns null on garbage.
+  function parse(str) {
+    if (typeof str === 'number') return Math.round(str * 100);
+    if (typeof str !== 'string') return null;
+    const cleaned = str.replace(/[^\d.\-]/g, '');
+    if (cleaned === '' || cleaned === '-' || cleaned === '.') return null;
+    const n = Number(cleaned);
+    if (!Number.isFinite(n)) return null;
+    return Math.round(n * 100);
+  }
+
+  // Format sen → "RM 1,234.56" (or other currency w/ locale).
+  function format(sen, opts = {}) {
+    const { currency = 'MYR', locale = 'en-MY', showSymbol = true } = opts;
+    const value = sen / 100; // ONLY at display time
+    if (currency === 'MYR' && showSymbol) {
+      // Enforce the "RM 1,234.56" house style regardless of locale peculiarities.
+      const abs = Math.abs(value).toLocaleString('en-MY', {
+        minimumFractionDigits: 2, maximumFractionDigits: 2,
+      });
+      return (value < 0 ? '-RM ' : 'RM ') + abs;
+    }
+    return value.toLocaleString(locale, {
+      style: showSymbol ? 'currency' : 'decimal',
+      currency,
+      minimumFractionDigits: 2, maximumFractionDigits: 2,
+    });
+  }
+
+  return { add, subtract, multiply, divide, percent, splitExact, parse, format, bankersRound, isInt };
+})();
+
+/* =========================================================================
+ * db.js — thin wrapper around the Artifact `db` capability.
+ * TODO(capabilities): before first publish, load the `artifact-capabilities`
+ * skill and replace these stubs with the real read_db / write_db calls per
+ * the current contract. All collection paths live under data/users/me/…
+ * ========================================================================= */
+const db = (() => {
+  const HAS_DB = typeof window !== 'undefined' && !!(window.claude && window.claude.db);
+
+  // In-memory fallback so the skeleton runs in a plain browser preview.
+  const mem = new Map(); // key = `${collection}/${doc_id}`
+
+  async function get(collection, doc_id) {
+    if (HAS_DB) return window.claude.db.get({ collection, doc_id });   // TODO(capabilities): verify shape
+    return mem.get(`${collection}/${doc_id}`) ?? null;
+  }
+  async function list(collection, { limit = 100, cursor } = {}) {
+    if (HAS_DB) return window.claude.db.list({ collection, limit, cursor }); // TODO(capabilities)
+    const rows = [];
+    for (const [k, v] of mem) {
+      if (k.startsWith(collection + '/')) rows.push({ id: k.slice(collection.length + 1), ...v });
+    }
+    return { rows, next_cursor: null };
+  }
+  async function set(collection, doc_id, data) {
+    if (HAS_DB) return window.claude.db.set({ collection, doc_id, data }); // TODO(capabilities)
+    mem.set(`${collection}/${doc_id}`, { ...data });
+  }
+  async function update(collection, doc_id, patch) {
+    if (HAS_DB) return window.claude.db.update({ collection, doc_id, data: patch }); // TODO(capabilities)
+    const prev = mem.get(`${collection}/${doc_id}`) ?? {};
+    mem.set(`${collection}/${doc_id}`, { ...prev, ...patch });
+  }
+  async function remove(collection, doc_id) {
+    if (HAS_DB) return window.claude.db.delete({ collection, doc_id }); // TODO(capabilities)
+    mem.delete(`${collection}/${doc_id}`);
+  }
+
+  // Debounced writer — coalesces rapid updates to the same doc.
+  const pending = new Map();
+  function scheduleWrite(collection, doc_id, patch, ms = 500) {
+    const key = `${collection}/${doc_id}`;
+    const prev = pending.get(key) ?? { patch: {}, timer: null };
+    Object.assign(prev.patch, patch);
+    if (prev.timer) clearTimeout(prev.timer);
+    prev.timer = setTimeout(() => {
+      const p = pending.get(key);
+      pending.delete(key);
+      update(collection, doc_id, p.patch);
+    }, ms);
+    pending.set(key, prev);
+  }
+
+  return {
+    get, list, set, update, remove, scheduleWrite,
+    // Collection roots (relative — the artifact capability contract prepends the user subtree)
+    PATHS: {
+      profile:       'data/users/me/profile',
+      accounts:      'data/users/me/accounts',
+      categories:    'data/users/me/categories',
+      transactions:  'data/users/me/transactions',
+      recurring:     'data/users/me/recurring',
+      sinking_funds: 'data/users/me/sinking_funds',
+      debts:         'data/users/me/debts',
+    },
+  };
+})();
+
+/* =========================================================================
+ * Default settings + starter data (Malaysian defaults)
+ * ========================================================================= */
+const DEFAULTS = {
+  profile: {
+    currency: 'MYR',
+    language: 'en',           // 'en' | 'ms'
+    theme:    'system',       // 'system' | 'light' | 'dark'
+    income_sen: 0,
+    split: { needs: 50, wants: 30, savings: 20 },
+    onboarding_done: false,
+  },
+  categoriesSeed: [
+    // NEEDS
+    { name: 'Groceries',           bucket: 'needs' },
+    { name: 'Rent / Mortgage',     bucket: 'needs' },
+    { name: 'Utilities — TNB',     bucket: 'needs' },
+    { name: 'Water',               bucket: 'needs' },
+    { name: 'Telco',               bucket: 'needs' },
+    { name: 'Internet',            bucket: 'needs' },
+    { name: 'Transport — Petrol',  bucket: 'needs' },
+    { name: 'Transport — Tolls',   bucket: 'needs' },
+    { name: 'Public Transport',    bucket: 'needs' },
+    { name: 'Insurance & Takaful', bucket: 'needs' },
+    { name: 'Medical',             bucket: 'needs' },
+    { name: 'PTPTN',               bucket: 'needs' },
+    { name: 'Childcare',           bucket: 'needs' },
+    // WANTS
+    { name: 'Mamak & Kopitiam',    bucket: 'wants' },
+    { name: 'Dining Out',          bucket: 'wants' },
+    { name: 'Coffee',              bucket: 'wants' },
+    { name: 'Shopping',            bucket: 'wants' },
+    { name: 'Subscriptions',       bucket: 'wants' },
+    { name: 'Travel',              bucket: 'wants' },
+    { name: 'Personal Care',       bucket: 'wants' },
+    { name: 'Gifts',               bucket: 'wants' },
+    // SAVINGS
+    { name: 'EPF top-up',          bucket: 'savings' },
+    { name: 'ASB / ASNB',          bucket: 'savings' },
+    { name: 'Tabung Haji',         bucket: 'savings' },
+    { name: 'PRS',                 bucket: 'savings' },
+    { name: 'Sinking Funds',       bucket: 'savings' },
+    { name: 'Zakat',               bucket: 'savings' },
+    { name: 'Debt (extra)',        bucket: 'savings' },
+  ],
+};
+
+/* =========================================================================
+ * Malaysian account presets (banks + eWallets + generic types).
+ * Order groups them: banks, then eWallets, then generic types.
+ * ========================================================================= */
+const ACCOUNT_PRESETS = [
+  // Banks
+  { name: 'Maybank',            type: 'current'     },
+  { name: 'CIMB',               type: 'current'     },
+  { name: 'Public Bank',        type: 'current'     },
+  { name: 'RHB',                type: 'current'     },
+  { name: 'Hong Leong',         type: 'current'     },
+  { name: 'AmBank',             type: 'current'     },
+  { name: 'Bank Islam',         type: 'current'     },
+  { name: 'Bank Rakyat',        type: 'current'     },
+  { name: 'BSN',                type: 'current'     },
+  { name: 'Alliance',           type: 'current'     },
+  // eWallets
+  { name: 'TnG eWallet',        type: 'ewallet'     },
+  { name: 'MAE',                type: 'ewallet'     },
+  { name: 'Boost',              type: 'ewallet'     },
+  { name: 'GrabPay',            type: 'ewallet'     },
+  { name: 'ShopeePay',          type: 'ewallet'     },
+  { name: 'BigPay',             type: 'ewallet'     },
+  { name: 'Setel',              type: 'ewallet'     },
+  // Generic
+  { name: 'Cash',               type: 'cash'        },
+  { name: 'Credit Card',        type: 'credit'      },
+  { name: 'Savings',            type: 'savings'     },
+];
+
+const CURRENCIES = [
+  { code: 'MYR', label: 'Malaysian Ringgit (RM)' },
+  { code: 'SGD', label: 'Singapore Dollar (S$)'  },
+  { code: 'USD', label: 'US Dollar ($)'          },
+  { code: 'AUD', label: 'Australian Dollar (A$)' },
+  { code: 'GBP', label: 'British Pound (£)'      },
+  { code: 'EUR', label: 'Euro (€)'               },
+  { code: 'IDR', label: 'Indonesian Rupiah (Rp)' },
+  { code: 'THB', label: 'Thai Baht (฿)'          },
+  { code: 'PHP', label: 'Philippine Peso (₱)'    },
+  { code: 'JPY', label: 'Japanese Yen (¥)'       },
+];
+
+/* =========================================================================
+ * i18n — string catalog (skeleton). Full BM catalog to be filled in.
+ * ========================================================================= */
+const STRINGS = {
+  en: {
+    brand: 'FASA Duit',
+    tabs: { dashboard: 'Dashboard', transactions: 'Transactions', funds: 'Funds', debts: 'Debts', settings: 'Settings' },
+    hideSidebar: 'Hide menu',
+    showSidebar: 'Show menu',
+    dashboard: {
+      title: 'This month',
+      needs: 'Needs', wants: 'Wants', savings: 'Savings & Debt',
+      spent: 'spent', remaining: 'remaining', used: 'used', daysLeft: 'days left',
+    },
+    dist: {
+      title: 'Where your money went',
+      subhead: 'Spend by category and the merchants seeing the most of it.',
+      ranges: {
+        thisMonth: 'This month', lastMonth: 'Last month',
+        last3: 'Last 3 months', last12: 'Last 12 months',
+      },
+      totalSpent: 'total spent',
+      other: 'Other',
+      topMerchants: 'Top merchants',
+      empty: 'No spend in this range yet.',
+    },
+    empty: {
+      dashboard: 'Set your monthly take-home income to unlock the 50/30/20 view.',
+    },
+    cta: { setIncome: 'Set income', addTxn: 'Add transaction' },
+    settings: {
+      title: 'Settings',
+      profile: {
+        title: 'Profile & budget',
+        sub: 'Your income, split, currency, language, and theme.',
+        income: 'Monthly take-home',
+        incomeHint: 'After tax, EPF, SOCSO, and EIS.',
+        split: 'Budget split',
+        splitHint: 'The three shares must add up to 100%. Any rounding remainder goes into the largest bucket automatically.',
+        splitOk: 'Adds up to 100%',
+        splitOff: 'Adds up to {n}% — save disabled',
+        needs: 'Needs %', wants: 'Wants %', savings: 'Savings & Debt %',
+        currency: 'Currency',
+        language: 'Language',
+        theme: 'Theme',
+        themeSystem: 'System', themeLight: 'Light', themeDark: 'Dark',
+        saved: 'Saved',
+      },
+      cats: {
+        title: 'Categories',
+        sub: 'Rename, rebucket, or archive. Archived categories stay attached to old transactions but hide from pickers.',
+        addPlaceholder: 'New category name',
+        add: 'Add',
+        archive: 'Archive', unarchive: 'Unarchive',
+        showArchived: 'Show archived',
+        buckets: { needs: 'Needs', wants: 'Wants', savings: 'Savings & Debt' },
+        empty: 'No categories yet — add your first one below.',
+      },
+      accts: {
+        title: 'Accounts',
+        sub: 'Rename, edit opening balance, or archive. Archived accounts stay attached to old transactions but hide from pickers.',
+        addPlaceholder: 'New account name',
+        add: 'Add',
+        archive: 'Archive', unarchive: 'Unarchive',
+        showArchived: 'Show archived',
+        openingBalance: 'Opening balance',
+        types: {
+          cash: 'Cash', current: 'Current', savings: 'Savings',
+          credit: 'Credit card', ewallet: 'eWallet', investment: 'Investment',
+        },
+        empty: 'No accounts yet — add your first one below.',
+      },
+    },
+    debts: {
+      title: 'Debt payoff',
+      addFirst: 'Add your first debt',
+      new: '+ Add debt',
+      cancel: 'Cancel', save: 'Save',
+      islamic: {
+        label: 'Islamic finance mode',
+        hint: 'Swap “interest / APR” for “profit rate”. Uses the same math, calmer language.',
+      },
+      empty: {
+        title: 'No debts yet',
+        note: 'Add each card, loan, or line of credit you owe. FASA Duit will compare two proven payoff strategies and show you the fastest, cheapest way out.',
+      },
+      totals: {
+        totalOwed: 'Total owed',
+        totalMin: 'Total minimum / month',
+      },
+      primer: {
+        title: 'Two ways to pay off multiple debts',
+        sub: 'Both strategies keep paying every minimum. The difference is where any leftover money (including the extra you add below) goes each month.',
+        snowball: {
+          badge: 'Snowball',
+          h: 'Pay the smallest first',
+          p: 'Attack the debt with the smallest balance until it’s gone, then roll that payment into the next smallest. Great for motivation — you cross debts off your list faster.',
+        },
+        avalanche: {
+          badge: 'Avalanche',
+          h: 'Pay the highest rate first',
+          p: 'Attack the debt with the highest interest rate first. Mathematically optimal — you pay less total interest and finish quicker, though the first “win” takes longer.',
+        },
+      },
+      extra: {
+        title: 'Extra payment per month',
+        hint: 'On top of every minimum. Drag or type an amount to see how much sooner you’d be debt-free.',
+      },
+      strat: {
+        snowball: 'Snowball', avalanche: 'Avalanche',
+        winner: 'Winner',
+        debtFree: 'Debt-free',
+        months: '{n} months',
+        totalInterest: 'Total interest',
+        savings: 'You save {amount} in interest with the {name} method.',
+        savingsSame: 'Both strategies finish at the same cost with these debts.',
+      },
+      editor: {
+        titleNew: 'Add debt', titleEdit: 'Edit debt',
+        name: 'Name', namePh: 'e.g. Maybank credit card',
+        type: 'Type',
+        balance: 'Current balance',
+        apr: 'APR', profitRate: 'Profit rate',
+        aprHint: 'Annual %.',
+        min: 'Minimum monthly payment',
+      },
+      types: {
+        credit: 'Credit card', ptptn: 'PTPTN',
+        personal: 'Personal loan', car: 'Car loan',
+        mortgage: 'Mortgage', asb: 'ASB loan', family: 'Family', other: 'Other',
+      },
+      row: {
+        balance: 'Balance', rate: 'Rate', min: 'Min/mo',
+        amortToggle: 'Show payoff schedule',
+        amortHide: 'Hide payoff schedule',
+        first12: 'First 12 months', last12: 'Last 12 months',
+      },
+      confirmDelete: 'Remove this debt from the calculator?',
+      deletedToast: 'Debt removed',
+    },
+    funds: {
+      title: 'Sinking funds',
+      totals: {
+        totalSaved: 'Total saved',
+        totalTarget: 'Combined target',
+        activeFunds: 'Active funds',
+      },
+      new: '+ New fund',
+      cancel: 'Cancel', save: 'Save',
+      empty: {
+        title: 'No sinking funds yet',
+        note: 'A sinking fund is money you set aside each month for a known future expense — Hari Raya, a new laptop, an emergency buffer, next year’s Umrah.',
+        cta: 'Create your first fund',
+      },
+      editor: {
+        titleNew: 'New fund', titleEdit: 'Edit fund',
+        name: 'Name', namePh: 'e.g. Hari Raya 2027',
+        target: 'Target amount', targetPh: '5,000.00',
+        date: 'Target date',
+        linked: 'Auto-contribute from category',
+        linkedNone: 'Manual contributions only',
+        icon: 'Icon',
+      },
+      stats: {
+        required: 'Required / month',
+        toGo: 'Left to save',
+        projected: 'On pace to finish',
+      },
+      status: {
+        onTrack: 'On track', behind: 'Behind pace', ahead: 'Ahead of pace', done: 'Goal reached',
+      },
+      log: {
+        title: 'Contributions',
+        addPh: 'Add contribution',
+        toggle: 'Log',
+        totalManual: 'From you',
+        totalLinked: 'From “{name}” category',
+        emptyLog: 'No contributions logged yet.',
+      },
+      dashboardNudge: 'Contribute {amount} to {name} this month to stay on pace.',
+      confirmDelete: 'Delete this fund? All manual contributions logged here will be lost.',
+      deletedToast: 'Fund deleted',
+    },
+    txn: {
+      title: 'Transactions',
+      quickAdd: 'Quick add', close: 'Close',
+      expense: 'Expense', income: 'Income',
+      amount: 'Amount', category: 'Category', account: 'Account', merchant: 'Merchant',
+      chooseCategory: 'Category…', chooseAccount: 'Account…',
+      searchPlaceholder: 'Search merchant, notes, tags…',
+      filterAll: 'All accounts',
+      filterCatAll: 'All categories',
+      count: '{n} transactions',
+      emptyTitle: 'No transactions yet',
+      emptyNote:  'Add your first transaction with the button above, or load a sample month of Malaysian entries to see the dashboard come alive.',
+      addSample: 'Load sample month',
+      addFirst: 'Add transaction',
+      deletedToast: 'Transaction deleted',
+      undo: 'Undo',
+      escHint: 'Press Enter to save · Esc to close',
+      dateCol: 'Date', merchantCol: 'Merchant', categoryCol: 'Category', accountCol: 'Account', amountCol: 'Amount',
+      sampleBadge: 'sample',
+    },
+    wizard: {
+      welcome: 'Welcome to FASA Duit',
+      subhead: 'Four quick steps to get you set up. You can change any of this later.',
+      stepOf: 'Step {n} of {total}',
+      step1Label: 'Income',
+      step1Title: 'What’s your monthly take-home?',
+      step1Sub:   'Your salary after tax, EPF, SOCSO, and EIS. We’ll split it into Needs 50%, Wants 30%, and Savings & Debt 20% — you can override the split anytime.',
+      incomeLabel: 'Monthly take-home',
+      incomeHint:  'Enter the amount that lands in your account each month.',
+      step2Label: 'Currency',
+      step2Title: 'Pick your currency',
+      step2Sub:   'MYR is the default. All figures use this currency — you can change it later in Settings.',
+      currencyLabel: 'Currency',
+      step3Label: 'Accounts',
+      step3Title: 'Which accounts and wallets do you use?',
+      step3Sub:   'Tap the ones you use — banks, eWallets, cash. Add an opening balance so your dashboard starts accurate. Skip this and add them later if you prefer.',
+      openingBalance: 'Opening balance',
+      addCustom: 'Add custom account',
+      customName: 'Account name',
+      step4Label: 'Categories',
+      step4Title: 'Starter categories',
+      step4Sub:   'We’ll pre-fill the Malaysian defaults so you can start tagging spend immediately. You can archive any you don’t use in Settings.',
+      catCount: '{n} categories will be created',
+      buckets: { needs: 'Needs', wants: 'Wants', savings: 'Savings & Debt' },
+      back: 'Back', next: 'Next', finish: 'Finish setup', skip: 'Skip for now',
+      incomeRequired: 'Enter your monthly income to continue',
+    },
+  },
+  ms: {
+    brand: 'FASA Duit',
+    tabs: { dashboard: 'Papan Pemuka', transactions: 'Transaksi', funds: 'Tabung', debts: 'Hutang', settings: 'Tetapan' },
+    hideSidebar: 'Sembunyi menu',
+    showSidebar: 'Tunjuk menu',
+    dashboard: {
+      title: 'Bulan ini',
+      needs: 'Keperluan', wants: 'Kehendak', savings: 'Simpanan & Hutang',
+      spent: 'dibelanja', remaining: 'baki', used: 'digunakan', daysLeft: 'hari lagi',
+    },
+    dist: {
+      title: 'Ke mana wang anda pergi',
+      subhead: 'Perbelanjaan mengikut kategori dan peniaga yang paling banyak.',
+      ranges: {
+        thisMonth: 'Bulan ini', lastMonth: 'Bulan lepas',
+        last3: '3 bulan lepas', last12: '12 bulan lepas',
+      },
+      totalSpent: 'jumlah dibelanja',
+      other: 'Lain-lain',
+      topMerchants: 'Peniaga teratas',
+      empty: 'Tiada perbelanjaan dalam julat ini.',
+    },
+    empty: {
+      dashboard: 'Tetapkan pendapatan bulanan anda untuk membuka pandangan 50/30/20.',
+    },
+    cta: { setIncome: 'Tetapkan pendapatan', addTxn: 'Tambah transaksi' },
+    settings: {
+      title: 'Tetapan',
+      profile: {
+        title: 'Profil & belanjawan',
+        sub: 'Pendapatan, nisbah, mata wang, bahasa dan tema anda.',
+        income: 'Pendapatan bersih bulanan',
+        incomeHint: 'Selepas cukai, KWSP, PERKESO dan EIS.',
+        split: 'Nisbah belanjawan',
+        splitHint: 'Ketiga-tiga bahagian mesti berjumlah 100%. Sisa pembundaran akan masuk ke tabung terbesar secara automatik.',
+        splitOk: 'Berjumlah 100%',
+        splitOff: 'Berjumlah {n}% — simpan dinyahdayakan',
+        needs: '% Keperluan', wants: '% Kehendak', savings: '% Simpanan & Hutang',
+        currency: 'Mata wang',
+        language: 'Bahasa',
+        theme: 'Tema',
+        themeSystem: 'Sistem', themeLight: 'Terang', themeDark: 'Gelap',
+        saved: 'Disimpan',
+      },
+      cats: {
+        title: 'Kategori',
+        sub: 'Namakan semula, tukar tabung, atau arkib. Kategori diarkib masih terikat pada transaksi lama tetapi tidak muncul dalam pemilih.',
+        addPlaceholder: 'Nama kategori baru',
+        add: 'Tambah',
+        archive: 'Arkib', unarchive: 'Nyahaarkib',
+        showArchived: 'Tunjuk yang diarkib',
+        buckets: { needs: 'Keperluan', wants: 'Kehendak', savings: 'Simpanan & Hutang' },
+        empty: 'Belum ada kategori — tambah yang pertama di bawah.',
+      },
+      accts: {
+        title: 'Akaun',
+        sub: 'Namakan semula, ubah baki pembukaan, atau arkib. Akaun diarkib masih terikat pada transaksi lama tetapi tidak muncul dalam pemilih.',
+        addPlaceholder: 'Nama akaun baru',
+        add: 'Tambah',
+        archive: 'Arkib', unarchive: 'Nyahaarkib',
+        showArchived: 'Tunjuk yang diarkib',
+        openingBalance: 'Baki pembukaan',
+        types: {
+          cash: 'Tunai', current: 'Semasa', savings: 'Simpanan',
+          credit: 'Kad kredit', ewallet: 'e-Dompet', investment: 'Pelaburan',
+        },
+        empty: 'Belum ada akaun — tambah yang pertama di bawah.',
+      },
+    },
+    debts: {
+      title: 'Bayar hutang',
+      addFirst: 'Tambah hutang pertama',
+      new: '+ Tambah hutang',
+      cancel: 'Batal', save: 'Simpan',
+      islamic: {
+        label: 'Mod kewangan Islamik',
+        hint: 'Tukar “faedah / APR” kepada “kadar keuntungan”. Matematik sama, bahasa lebih tenang.',
+      },
+      empty: {
+        title: 'Belum ada hutang',
+        note: 'Tambah setiap kad, pinjaman, atau kemudahan kredit yang anda ada. FASA Duit akan bandingkan dua strategi pembayaran dan tunjukkan jalan keluar terpantas.',
+      },
+      totals: {
+        totalOwed: 'Jumlah terhutang',
+        totalMin: 'Bayaran minimum / bulan',
+      },
+      primer: {
+        title: 'Dua cara membayar banyak hutang',
+        sub: 'Kedua-dua strategi tetap membayar minimum setiap hutang. Bezanya adalah ke mana wang lebihan (termasuk tambahan di bawah) pergi setiap bulan.',
+        snowball: {
+          badge: 'Snowball',
+          h: 'Bayar yang kecil dahulu',
+          p: 'Serang hutang dengan baki terkecil sehingga habis, kemudian pindahkan bayaran itu ke hutang seterusnya yang paling kecil. Bagus untuk motivasi — kemenangan pertama cepat.',
+        },
+        avalanche: {
+          badge: 'Avalanche',
+          h: 'Bayar kadar tertinggi dahulu',
+          p: 'Serang hutang dengan kadar faedah tertinggi dahulu. Optimum matematik — anda bayar kurang jumlah faedah dan habis lebih cepat, walaupun kemenangan pertama mengambil masa.',
+        },
+      },
+      extra: {
+        title: 'Bayaran tambahan sebulan',
+        hint: 'Selain bayaran minimum. Seret atau taip jumlah untuk lihat berapa cepat anda bebas hutang.',
+      },
+      strat: {
+        snowball: 'Snowball', avalanche: 'Avalanche',
+        winner: 'Pemenang',
+        debtFree: 'Bebas hutang',
+        months: '{n} bulan',
+        totalInterest: 'Jumlah faedah',
+        savings: 'Anda jimat {amount} faedah dengan kaedah {name}.',
+        savingsSame: 'Kedua-dua strategi tamat pada kos yang sama untuk hutang ini.',
+      },
+      editor: {
+        titleNew: 'Tambah hutang', titleEdit: 'Sunting hutang',
+        name: 'Nama', namePh: 'cth. Kad kredit Maybank',
+        type: 'Jenis',
+        balance: 'Baki semasa',
+        apr: 'APR', profitRate: 'Kadar keuntungan',
+        aprHint: 'Peratus tahunan.',
+        min: 'Bayaran minimum bulanan',
+      },
+      types: {
+        credit: 'Kad kredit', ptptn: 'PTPTN',
+        personal: 'Pinjaman peribadi', car: 'Pinjaman kereta',
+        mortgage: 'Gadai janji', asb: 'Pinjaman ASB', family: 'Keluarga', other: 'Lain-lain',
+      },
+      row: {
+        balance: 'Baki', rate: 'Kadar', min: 'Min/bln',
+        amortToggle: 'Tunjuk jadual bayaran',
+        amortHide: 'Sembunyi jadual bayaran',
+        first12: '12 bulan pertama', last12: '12 bulan terakhir',
+      },
+      confirmDelete: 'Buang hutang ini dari kalkulator?',
+      deletedToast: 'Hutang dibuang',
+    },
+    funds: {
+      title: 'Tabung simpanan',
+      totals: {
+        totalSaved: 'Jumlah disimpan',
+        totalTarget: 'Sasaran gabungan',
+        activeFunds: 'Tabung aktif',
+      },
+      new: '+ Tabung baru',
+      cancel: 'Batal', save: 'Simpan',
+      empty: {
+        title: 'Belum ada tabung simpanan',
+        note: 'Tabung simpanan adalah wang yang anda ketepikan setiap bulan untuk perbelanjaan akan datang — Hari Raya, komputer riba baru, tabung kecemasan, Umrah tahun depan.',
+        cta: 'Cipta tabung pertama',
+      },
+      editor: {
+        titleNew: 'Tabung baru', titleEdit: 'Sunting tabung',
+        name: 'Nama', namePh: 'cth. Hari Raya 2027',
+        target: 'Jumlah sasaran', targetPh: '5,000.00',
+        date: 'Tarikh sasaran',
+        linked: 'Auto-sumbang dari kategori',
+        linkedNone: 'Sumbangan manual sahaja',
+        icon: 'Ikon',
+      },
+      stats: {
+        required: 'Perlu / bulan',
+        toGo: 'Baki simpanan',
+        projected: 'Tarikh anggaran siap',
+      },
+      status: {
+        onTrack: 'Ikut jadual', behind: 'Ketinggalan', ahead: 'Mendahului', done: 'Sasaran dicapai',
+      },
+      log: {
+        title: 'Sumbangan',
+        addPh: 'Tambah sumbangan',
+        toggle: 'Log',
+        totalManual: 'Dari anda',
+        totalLinked: 'Dari kategori “{name}”',
+        emptyLog: 'Belum ada sumbangan dilog.',
+      },
+      dashboardNudge: 'Sumbang {amount} ke {name} bulan ini untuk kekal atas jadual.',
+      confirmDelete: 'Padam tabung ini? Semua sumbangan manual akan hilang.',
+      deletedToast: 'Tabung dipadam',
+    },
+    txn: {
+      title: 'Transaksi',
+      quickAdd: 'Tambah cepat', close: 'Tutup',
+      expense: 'Perbelanjaan', income: 'Pendapatan',
+      amount: 'Jumlah', category: 'Kategori', account: 'Akaun', merchant: 'Peniaga',
+      chooseCategory: 'Kategori…', chooseAccount: 'Akaun…',
+      searchPlaceholder: 'Cari peniaga, nota, tag…',
+      filterAll: 'Semua akaun',
+      filterCatAll: 'Semua kategori',
+      count: '{n} transaksi',
+      emptyTitle: 'Belum ada transaksi',
+      emptyNote:  'Tambah transaksi pertama anda dengan butang di atas, atau muat bulan contoh transaksi Malaysia untuk lihat papan pemuka bergerak.',
+      addSample: 'Muat bulan contoh',
+      addFirst: 'Tambah transaksi',
+      deletedToast: 'Transaksi dipadam',
+      undo: 'Undur',
+      escHint: 'Enter untuk simpan · Esc untuk tutup',
+      dateCol: 'Tarikh', merchantCol: 'Peniaga', categoryCol: 'Kategori', accountCol: 'Akaun', amountCol: 'Jumlah',
+      sampleBadge: 'contoh',
+    },
+    wizard: {
+      welcome: 'Selamat datang ke FASA Duit',
+      subhead: 'Empat langkah pantas untuk sediakan akaun anda. Semua ini boleh diubah kemudian.',
+      stepOf: 'Langkah {n} daripada {total}',
+      step1Label: 'Pendapatan',
+      step1Title: 'Berapa pendapatan bersih bulanan anda?',
+      step1Sub:   'Gaji selepas cukai, KWSP, PERKESO dan EIS. Kami akan bahagikan kepada Keperluan 50%, Kehendak 30%, dan Simpanan & Hutang 20% — nisbah boleh diubah bila-bila.',
+      incomeLabel: 'Pendapatan bersih bulanan',
+      incomeHint:  'Masukkan jumlah yang masuk ke akaun anda setiap bulan.',
+      step2Label: 'Mata Wang',
+      step2Title: 'Pilih mata wang',
+      step2Sub:   'MYR adalah pilihan lalai. Semua nombor menggunakan mata wang ini — boleh diubah di Tetapan.',
+      currencyLabel: 'Mata wang',
+      step3Label: 'Akaun',
+      step3Title: 'Akaun dan e-dompet mana yang anda guna?',
+      step3Sub:   'Ketik yang anda guna — bank, e-dompet, tunai. Masukkan baki pembukaan supaya papan pemuka mula tepat. Boleh langkau dan tambah kemudian.',
+      openingBalance: 'Baki pembukaan',
+      addCustom: 'Tambah akaun tersuai',
+      customName: 'Nama akaun',
+      step4Label: 'Kategori',
+      step4Title: 'Kategori permulaan',
+      step4Sub:   'Kami akan isi kategori Malaysia secara automatik supaya anda boleh mula log perbelanjaan. Yang tidak perlu boleh diarkib di Tetapan.',
+      catCount: '{n} kategori akan dibuat',
+      buckets: { needs: 'Keperluan', wants: 'Kehendak', savings: 'Simpanan & Hutang' },
+      back: 'Kembali', next: 'Seterusnya', finish: 'Selesai', skip: 'Langkau dahulu',
+      incomeRequired: 'Masukkan pendapatan bulanan untuk teruskan',
+    },
+  },
+};
+
+// Small string interpolation helper: fmt("Step {n} of {total}", {n:1,total:4})
+const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
+
+/* =========================================================================
+ * App shell — React 18 + hash router (dashboard | txn | funds | debts | settings | debug/math)
+ * ========================================================================= */
+const { useState, useEffect, useMemo, useReducer, useCallback } = React;
+const e = React.createElement;
+
+/**
+ * Route is React state (source of truth). We MIRROR to window.location.hash
+ * so links + reload keep the route, but we do NOT rely on `hashchange` for
+ * navigation — some sandboxed iframes (and same-value assignments) swallow
+ * that event, which used to break the sidebar.
+ */
+function useRoute() {
+  const initial = (typeof window !== 'undefined' && window.location.hash.replace(/^#/, '')) || 'dashboard';
+  const [route, setRouteState] = useState(initial);
+
+  // External hash changes (Back/Forward, manual URL edit) still sync in.
+  useEffect(() => {
+    const onChange = () => {
+      const h = window.location.hash.replace(/^#/, '') || 'dashboard';
+      setRouteState(h);
+    };
+    window.addEventListener('hashchange', onChange);
+    return () => window.removeEventListener('hashchange', onChange);
+  }, []);
+
+  const setRoute = useCallback((next) => {
+    setRouteState(next);
+    // Best-effort URL sync. Wrap in try/catch — some hosts throw on hash writes.
+    try {
+      if (window.location.hash !== '#' + next) window.location.hash = next;
+    } catch (_) { /* ignore — state is still authoritative */ }
+  }, []);
+
+  return [route, setRoute];
+}
+
+// Simple id generator for docs
+const uid = (prefix) => prefix + '_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+
+/* =========================================================================
+ * Collection hooks: list-shaped state hydrated from db, with add/update/remove.
+ * ========================================================================= */
+function useCollection(pathKey, seedIfEmpty) {
+  const path = db.PATHS[pathKey];
+  const [rows, setRows] = useState([]);       // [{id, ...data}]
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const res = await db.list(path, { limit: 500 });
+      let list = (res.rows ?? []).map(r => ({ id: r.id, ...r }));
+      // Strip the id field that may have been mirrored into data
+      list = list.map(({ id, ...rest }) => ({ id, ...rest }));
+      if (list.length === 0 && seedIfEmpty) {
+        const seeded = await seedIfEmpty();
+        if (seeded) list = seeded;
+      }
+      setRows(list);
+      setLoaded(true);
+    })();
+    // eslint-disable-next-line
+  }, [path]);
+
+  const add = useCallback(async (data) => {
+    const id = uid(pathKey.slice(0, 3));
+    await db.set(path, id, data);
+    setRows((r) => [{ id, ...data }, ...r]);
+    return id;
+  }, [path, pathKey]);
+
+  const update = useCallback(async (id, patch) => {
+    await db.update(path, id, patch);
+    setRows((r) => r.map(x => x.id === id ? { ...x, ...patch } : x));
+  }, [path]);
+
+  const remove = useCallback(async (id) => {
+    await db.remove(path, id);
+    setRows((r) => r.filter(x => x.id !== id));
+  }, [path]);
+
+  const restore = useCallback(async (row) => {
+    const { id, ...data } = row;
+    await db.set(path, id, data);
+    setRows((r) => [row, ...r]);
+  }, [path]);
+
+  return { rows, loaded, add, update, remove, restore, setRows };
+}
+
+/* =========================================================================
+ * Toast + undo system
+ * ========================================================================= */
+function useToasts() {
+  const [toasts, setToasts] = useState([]);
+  const push = useCallback((toast) => {
+    const id = uid('t');
+    setToasts((ts) => [...ts, { id, ...toast }]);
+    const ttl = toast.durationMs ?? 5000;
+    setTimeout(() => {
+      setToasts((ts) => ts.filter(t => t.id !== id));
+    }, ttl);
+    return id;
+  }, []);
+  const dismiss = useCallback((id) => {
+    setToasts((ts) => ts.filter(t => t.id !== id));
+  }, []);
+  return { toasts, push, dismiss };
+}
+
+function ToastRegion({ toasts, dismiss }) {
+  return e(React.Fragment, null,
+    toasts.map(t =>
+      e('div', { key: t.id, className: 'toast', role: 'status' },
+        t.message,
+        t.onUndo && e('button', {
+          className: 'undo-btn', type: 'button',
+          onClick: () => { t.onUndo(); dismiss(t.id); },
+        }, t.undoLabel ?? 'Undo')
+      )
+    )
+  );
+}
+
+/* =========================================================================
+ * Sample month seeder — 20 realistic MY transactions in the current month.
+ * ========================================================================= */
+function makeSampleMonth(categoriesByName, accountsByName) {
+  const acc = (name) =>
+    (accountsByName[name] ?? Object.values(accountsByName)[0])?.id ?? null;
+  const cat = (name) => categoriesByName[name]?.id ?? null;
+
+  // Always emit all 20 entries — spread across the most recent 20 days
+  // ending today, so it works whether today is the 1st or the 30th.
+  const raw = [
+    { merchant: 'Maybank Salary',       category: 'EPF top-up',           account: 'Maybank',      amount_sen:  650000 },
+    { merchant: 'Village Grocer',       category: 'Groceries',            account: 'Maybank',      amount_sen: -18450 },
+    { merchant: 'Petronas Setapak',     category: 'Transport — Petrol',   account: 'Maybank',      amount_sen: -12000 },
+    { merchant: 'Astro',                category: 'Subscriptions',        account: 'Maybank',      amount_sen: -12990 },
+    { merchant: 'Unifi',                category: 'Internet',             account: 'Maybank',      amount_sen: -13900 },
+    { merchant: 'Maxis Postpaid',       category: 'Telco',                account: 'Maybank',      amount_sen: -9900  },
+    { merchant: 'Restoran Kapitan',     category: 'Mamak & Kopitiam',     account: 'TnG eWallet',  amount_sen: -1850  },
+    { merchant: 'Grab',                 category: 'Public Transport',     account: 'TnG eWallet',  amount_sen: -2400  },
+    { merchant: 'Starbucks Pavilion',   category: 'Coffee',               account: 'Maybank',      amount_sen: -2350  },
+    { merchant: 'TNB',                  category: 'Utilities — TNB',      account: 'Maybank',      amount_sen: -21400 },
+    { merchant: 'Air Selangor',         category: 'Water',                account: 'Maybank',      amount_sen: -3800  },
+    { merchant: 'Shopee',               category: 'Shopping',             account: 'ShopeePay',    amount_sen: -8990  },
+    { merchant: 'SmartTAG top-up',      category: 'Transport — Tolls',    account: 'TnG eWallet',  amount_sen: -5000  },
+    { merchant: 'Netflix',              category: 'Subscriptions',        account: 'Maybank',      amount_sen: -5500  },
+    { merchant: 'Village Grocer',       category: 'Groceries',            account: 'Maybank',      amount_sen: -15620 },
+    { merchant: 'PTPTN',                category: 'PTPTN',                account: 'Maybank',      amount_sen: -30000 },
+    { merchant: 'Watsons',              category: 'Personal Care',        account: 'Maybank',      amount_sen: -4780  },
+    { merchant: 'KFC Bangsar',          category: 'Dining Out',           account: 'Maybank',      amount_sen: -3450  },
+    { merchant: 'ASNB',                 category: 'ASB / ASNB',           account: 'Maybank',      amount_sen: -50000 },
+    { merchant: 'Spotify',              category: 'Subscriptions',        account: 'Maybank',      amount_sen: -1490  },
+  ];
+
+  // Spread entries across the last N days ending today (N = raw.length).
+  // Salary lands on the earliest date so month-to-date income shows the full amount.
+  const now = new Date();
+  const iso = (d) => d.toISOString().slice(0, 10);
+  return raw.map((r, idx) => {
+    const d = new Date(now);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - (raw.length - 1 - idx)); // 0 = oldest, last = today
+    return {
+      date: iso(d),
+      account_id:  acc(r.account),
+      category_id: cat(r.category),
+      amount_sen:  r.amount_sen,
+      merchant:    r.merchant,
+      notes:       '',
+      tags:        ['sample'],
+    };
+  });
+}
+
+function useProfile() {
+  const [profile, setProfile] = useState(DEFAULTS.profile);
+  useEffect(() => {
+    (async () => {
+      const stored = await db.get(db.PATHS.profile, 'settings');
+      if (stored) setProfile({ ...DEFAULTS.profile, ...stored });
+    })();
+  }, []);
+  const update = useCallback((patch) => {
+    setProfile((p) => {
+      const next = { ...p, ...patch };
+      db.scheduleWrite(db.PATHS.profile, 'settings', patch);
+      return next;
+    });
+  }, []);
+  return [profile, update];
+}
+
+function useTheme(profile) {
+  useEffect(() => {
+    const root = document.documentElement;
+    if (profile.theme === 'system') root.removeAttribute('data-theme');
+    else root.setAttribute('data-theme', profile.theme);
+  }, [profile.theme]);
+}
+
+function Sidebar({ t, route, onNav, onHide }) {
+  const items = ['dashboard', 'transactions', 'funds', 'debts', 'settings'];
+  const tip = t.hideSidebar ?? 'Hide menu';
+  return e('aside', { className: 'sidebar', 'aria-label': 'primary' },
+    e('div', { className: 'brand-row' },
+      e('div', { className: 'brand' }, t.brand),
+      e('button', {
+        className: 'hide-btn', type: 'button',
+        onClick: onHide, 'aria-label': tip, title: tip,
+      },
+        // Panel-left icon
+        e('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+                   strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round',
+                   'aria-hidden': 'true' },
+          e('rect', { x: 3, y: 3, width: 18, height: 18, rx: 2 }),
+          e('line', { x1: 9, y1: 3, x2: 9, y2: 21 }),
+        ),
+      ),
+    ),
+    e('nav', { role: 'tablist' },
+      items.map((k) =>
+        e('button', {
+          key: k, role: 'tab', 'aria-selected': route === k,
+          className: route === k ? 'active' : '',
+          onClick: () => onNav(k),
+        }, t.tabs[k])
+      )
+    )
+  );
+}
+
+function TopBar({
+  t, lang, onLang, onQuickAdd, showQuickAdd = true,
+  onToggleSidebar, sidebarHidden, showSidebarToggle = true,
+}) {
+  const toggleTip = t.showSidebar ?? 'Show menu';
+  // The topbar only carries the SHOW toggle — the HIDE version lives inside
+  // the sidebar itself. So the button appears only while the sidebar is hidden.
+  const showToggleHere = showSidebarToggle && sidebarHidden;
+  return e('div', { className: 'topbar' },
+    e('div', { className: 'left' },
+      showToggleHere && e('span', { className: 'tip', 'data-tip': toggleTip },
+        e('button', {
+          className: 'icon-btn ghost', type: 'button',
+          onClick: onToggleSidebar,
+          'aria-label': toggleTip,
+          'aria-expanded': !sidebarHidden,
+          title: toggleTip,
+        },
+          // Panel-left icon (Lucide-style)
+          e('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+                     strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round',
+                     'aria-hidden': 'true' },
+            e('rect', { x: 3, y: 3, width: 18, height: 18, rx: 2 }),
+            e('line', { x1: 9, y1: 3, x2: 9, y2: 21 }),
+          )
+        )
+      ),
+      // Show the brand inline when the sidebar (which normally holds it) is hidden on desktop.
+      sidebarHidden && e('span', { className: 'brand-inline' }, t.brand),
+      // Mobile-only brand (kept for viewports < 720px where sidebar is always hidden).
+      !sidebarHidden && e('div', { className: 'brand-mobile' }, t.brand),
+    ),
+    e('div', { className: 'right' },
+      e('button', {
+        className: 'ghost',
+        onClick: () => onLang(lang === 'en' ? 'ms' : 'en'),
+      }, lang === 'en' ? 'BM' : 'EN'),
+    )
+  );
+}
+
+function BottomNav({ t, route, onNav }) {
+  const items = ['dashboard', 'transactions', 'funds', 'debts', 'settings'];
+  return e('nav', { className: 'bottomnav', 'aria-label': 'primary' },
+    items.map((k) =>
+      e('button', {
+        key: k, className: route === k ? 'active' : '',
+        onClick: () => onNav(k), 'aria-current': route === k ? 'page' : undefined,
+      }, t.tabs[k])
+    )
+  );
+}
+
+function Meter({ label, spent_sen, budget_sen, daysLeft, t }) {
+  const over = spent_sen > budget_sen;
+  const pct = budget_sen > 0 ? Math.min(100, Math.round((spent_sen / budget_sen) * 100)) : 0;
+  const remaining_sen = budget_sen - spent_sen;
+  return e('div', { className: 'meter' + (over ? ' over' : '') },
+    e('div', { className: 'row' },
+      e('span', { className: 'lbl' }, label),
+      e('span', { className: 'val num' },
+        `${money.format(spent_sen)} ${t.dashboard.spent} · ${money.format(Math.max(0, remaining_sen))} ${t.dashboard.remaining} · ${pct}% ${t.dashboard.used}`
+      )
+    ),
+    e('div', { className: 'track' },
+      e('div', { className: 'fill', style: { width: pct + '%' } })
+    )
+  );
+}
+
+/* =========================================================================
+ * Expense distribution — donut, ranked categories, top merchants
+ * ========================================================================= */
+
+// Warm palette for donut segments — cycles gracefully in both themes.
+const DIST_COLORS = [
+  '#C8553D', '#6B8E5A', '#D98E3A', '#8C5A3C', '#A03E2F',
+  '#5F7A6B', '#B08056', '#6E4A3A', '#C79A5B', '#8F6E52',
+];
+
+function computeRange(kind) {
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth(), d = now.getDate();
+  const iso = (dt) => dt.toISOString().slice(0, 10);
+  if (kind === 'thisMonth') {
+    return { from: iso(new Date(y, m, 1)), to: iso(now) };
+  }
+  if (kind === 'lastMonth') {
+    return { from: iso(new Date(y, m - 1, 1)), to: iso(new Date(y, m, 0)) };
+  }
+  if (kind === 'last3') {
+    return { from: iso(new Date(y, m - 3, 1)), to: iso(now) };
+  }
+  if (kind === 'last12') {
+    return { from: iso(new Date(y, m - 12, 1)), to: iso(now) };
+  }
+  return { from: iso(new Date(y, m, 1)), to: iso(now) };
+}
+
+function useExpenseAggregations(transactions, categories, range) {
+  return useMemo(() => {
+    const catById = Object.fromEntries(categories.map(c => [c.id, c]));
+    const { from, to } = range;
+    // Only expenses (amount_sen < 0) within the range.
+    const inRange = transactions.filter(tx =>
+      tx.amount_sen < 0 &&
+      tx.date && tx.date >= from && tx.date <= to
+    );
+    // Aggregate by category
+    const byCatMap = new Map();
+    let total = 0;
+    for (const tx of inRange) {
+      const sen = Math.abs(tx.amount_sen);
+      total += sen;
+      const key = tx.category_id || '__uncat';
+      const prev = byCatMap.get(key) ?? { catId: key, sen: 0,
+        name: catById[tx.category_id]?.name ?? '—' };
+      prev.sen += sen;
+      byCatMap.set(key, prev);
+    }
+    const byCategory = [...byCatMap.values()]
+      .map(r => ({ ...r, pct: total > 0 ? (r.sen / total) * 100 : 0 }))
+      .sort((a, b) => b.sen - a.sen);
+
+    // Aggregate by merchant
+    const byMerchMap = new Map();
+    for (const tx of inRange) {
+      const name = (tx.merchant || '').trim();
+      if (!name) continue;
+      byMerchMap.set(name, (byMerchMap.get(name) ?? 0) + Math.abs(tx.amount_sen));
+    }
+    const topMerchants = [...byMerchMap.entries()]
+      .map(([name, sen]) => ({ name, sen }))
+      .sort((a, b) => b.sen - a.sen)
+      .slice(0, 5);
+
+    return { byCategory, topMerchants, total };
+  }, [transactions, categories, range.from, range.to]);
+}
+
+function ExpenseDistribution({ t, currency, transactions, categories, onFilterLedger }) {
+  const [rangeKind, setRangeKind] = useState('thisMonth');
+  const range = useMemo(() => computeRange(rangeKind), [rangeKind]);
+  const { byCategory, topMerchants, total } = useExpenseAggregations(transactions, categories, range);
+
+  // Group into top 8 + "Other" for the donut / rank list
+  const grouped = useMemo(() => {
+    if (byCategory.length <= 9) return byCategory;
+    const top = byCategory.slice(0, 8);
+    const rest = byCategory.slice(8);
+    const otherSen = rest.reduce((a, b) => a + b.sen, 0);
+    const otherPct = total > 0 ? (otherSen / total) * 100 : 0;
+    return [
+      ...top,
+      { catId: '__other', name: t.dist.other, sen: otherSen, pct: otherPct, restIds: rest.map(r => r.catId) },
+    ];
+  }, [byCategory, total, t.dist.other]);
+
+  const colorFor = (idx) => DIST_COLORS[idx % DIST_COLORS.length];
+
+  const { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } = window.Recharts || {};
+  if (!PieChart) {
+    return e('div', { className: 'card' },
+      e('h3', null, t.dist.title),
+      e('p', { className: 'muted' }, 'Charts library is still loading…')
+    );
+  }
+
+  const ranges = [
+    ['thisMonth', t.dist.ranges.thisMonth],
+    ['lastMonth', t.dist.ranges.lastMonth],
+    ['last3',     t.dist.ranges.last3],
+    ['last12',    t.dist.ranges.last12],
+  ];
+
+  const isEmpty = total === 0;
+
+  const onSliceClick = (row) => {
+    if (row.catId === '__other') return; // ambiguous — skip
+    if (row.catId === '__uncat') return;
+    onFilterLedger({ categoryId: row.catId, range });
+  };
+
+  return e('div', { className: 'grid dist-grid' },
+    // Left: donut + ranked category list
+    e('div', { className: 'card elevated' },
+      e('div', { className: 'view-header', style: { marginBottom: 8 } },
+        e('h3', { style: { margin: 0 } }, t.dist.title),
+        e('div', { className: 'range-toggle', role: 'tablist', 'aria-label': 'Range' },
+          ranges.map(([k, label]) =>
+            e('button', {
+              key: k, type: 'button', role: 'tab',
+              'aria-selected': rangeKind === k,
+              className: rangeKind === k ? 'active' : '',
+              onClick: () => setRangeKind(k),
+            }, label)
+          )
+        ),
+      ),
+      e('p', { className: 'muted', style: { marginTop: 4, marginBottom: 12, fontSize: 13 } }, t.dist.subhead),
+
+      isEmpty
+        ? e('div', { className: 'empty', style: { padding: '32px 12px' } },
+            e('p', null, t.dist.empty),
+          )
+        : e(React.Fragment, null,
+            e('div', { className: 'donut-wrap' },
+              e(ResponsiveContainer, { width: '100%', height: '100%' },
+                e(PieChart, null,
+                  e(Pie, {
+                    data: grouped, dataKey: 'sen', nameKey: 'name',
+                    innerRadius: 70, outerRadius: 105,
+                    paddingAngle: 1, stroke: 'var(--bg)', strokeWidth: 2,
+                    isAnimationActive: true, animationDuration: 400,
+                    onClick: (data) => data && onSliceClick(data.payload || data),
+                  },
+                    grouped.map((row, idx) => e(Cell, { key: row.catId, fill: colorFor(idx), cursor: 'pointer' }))
+                  ),
+                  e(Tooltip, {
+                    content: ({ active, payload }) => {
+                      if (!active || !payload || !payload.length) return null;
+                      const p = payload[0].payload;
+                      return e('div', { className: 'rchart-tip' },
+                        e('div', { className: 'name' }, p.name),
+                        e('div', { className: 'val' },
+                          money.format(p.sen, { currency }) + '  ·  ' + p.pct.toFixed(1) + '%'
+                        )
+                      );
+                    },
+                  }),
+                )
+              ),
+              e('div', { className: 'donut-center' },
+                e('div', { className: 'total' }, money.format(total, { currency })),
+                e('div', { className: 'sub' }, t.dist.totalSpent),
+              ),
+            ),
+            e('div', { className: 'cat-rank' },
+              grouped.map((row, idx) =>
+                e('div', {
+                  key: row.catId, className: 'rank-row',
+                  onClick: () => onSliceClick(row),
+                  role: 'button', tabIndex: 0,
+                  onKeyDown: (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onSliceClick(row); } },
+                  'aria-label': `${row.name}: ${money.format(row.sen, { currency })}`,
+                },
+                  e('span', { className: 'swatch', style: { background: colorFor(idx) } }),
+                  e('span', { className: 'name' }, row.name),
+                  e('span', { className: 'amt' }, money.format(row.sen, { currency })),
+                  e('span', { className: 'pct' }, row.pct.toFixed(1) + '%'),
+                )
+              )
+            ),
+          ),
+    ),
+
+    // Right: top merchants
+    e('div', { className: 'card' },
+      e('h3', null, t.dist.topMerchants),
+      topMerchants.length === 0
+        ? e('p', { className: 'muted' }, t.dist.empty)
+        : e('div', { className: 'merchant-list' },
+            topMerchants.map(m =>
+              e('div', {
+                key: m.name, className: 'm-row',
+                role: 'button', tabIndex: 0,
+                onClick: () => onFilterLedger({ merchant: m.name, range }),
+                onKeyDown: (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onFilterLedger({ merchant: m.name, range }); } },
+              },
+                e('span', { className: 'name' }, m.name),
+                e('span', { className: 'amt' }, money.format(m.sen, { currency })),
+              )
+            )
+          )
+    ),
+  );
+}
+
+/* =========================================================================
+ * Debts — simulator + editor + Debts view
+ * Both strategies pay every minimum first; leftover budget (freed minimums +
+ * user's extra) flows to a focused debt (snowball = smallest balance,
+ * avalanche = highest rate). Amounts are integer sen throughout.
+ * ========================================================================= */
+
+function simulateDebts(debts, strategy /* 'snowball' | 'avalanche' */, extra_sen) {
+  const state = debts.map(d => ({
+    id: d.id, name: d.name,
+    balance: d.balance_sen ?? 0,
+    apr_bps: d.apr_bps ?? 0,
+    min:     d.min_payment_sen ?? 0,
+    schedule: [],
+  }));
+  const totalMin = debts.reduce((s, d) => s + (d.min_payment_sen ?? 0), 0);
+  const monthlyBudget = totalMin + (extra_sen ?? 0);
+
+  let month = 0, total_interest = 0;
+  const MAX_MONTHS = 600;
+
+  while (state.some(d => d.balance > 0) && month < MAX_MONTHS) {
+    month++;
+    // 1) Accrue interest on every active debt
+    for (const d of state) {
+      if (d.balance <= 0) { d._m_int = 0; d._m_pay = 0; continue; }
+      const int_sen = money.bankersRound(d.balance * (d.apr_bps / 10000) / 12);
+      d.balance += int_sen;
+      total_interest += int_sen;
+      d._m_int = int_sen;
+      d._m_pay = 0;
+    }
+
+    // 2) Focus order for this month
+    const active = state.filter(d => d.balance > 0);
+    if (active.length === 0) break;
+    const focusOrder = [...active].sort((a, b) =>
+      strategy === 'snowball' ? a.balance - b.balance : b.apr_bps - a.apr_bps
+    );
+
+    // 3) Pay minimum on each active debt (bounded by remaining balance)
+    let budget = monthlyBudget;
+    for (const d of active) {
+      const pay = Math.min(d.min, d.balance, budget);
+      d.balance -= pay;
+      budget -= pay;
+      d._m_pay += pay;
+      if (budget <= 0) break;
+    }
+
+    // 4) Apply the remaining budget to the focus debt(s), highest priority first
+    for (const d of focusOrder) {
+      if (budget <= 0) break;
+      if (d.balance <= 0) continue;
+      const pay = Math.min(d.balance, budget);
+      d.balance -= pay;
+      budget -= pay;
+      d._m_pay += pay;
+    }
+
+    // 5) Record schedule row for each debt that has been active this month
+    for (const d of state) {
+      if (d._m_pay === 0 && d._m_int === 0) continue;
+      d.schedule.push({
+        month, interest: d._m_int, payment: d._m_pay, balance: d.balance,
+      });
+    }
+
+    // Safety: if nothing changed (impossible payments), break to avoid infinite loop
+    const allChanged = active.some(d => d._m_pay > 0);
+    if (!allChanged) break;
+  }
+
+  const debtFree = new Date();
+  debtFree.setMonth(debtFree.getMonth() + month);
+  return {
+    strategy,
+    months: month,
+    total_interest_sen: total_interest,
+    debt_free_iso: debtFree.toISOString().slice(0, 10),
+    perDebt: state.map(d => ({ id: d.id, name: d.name, schedule: d.schedule })),
+    finished: state.every(d => d.balance <= 0),
+  };
+}
+
+const DEBT_TYPES = ['credit', 'ptptn', 'personal', 'car', 'mortgage', 'asb', 'family', 'other'];
+
+function DebtEditor({ t, currency, islamic, initial, onCancel, onSave }) {
+  const ed = t.debts.editor;
+  const [name, setName] = useState(initial?.name ?? '');
+  const [type, setType] = useState(initial?.type ?? 'credit');
+  const [balance, setBalance] = useState(
+    initial?.balance_sen ? (initial.balance_sen / 100).toFixed(2) : ''
+  );
+  const [apr, setApr] = useState(
+    initial?.apr_bps != null ? (initial.apr_bps / 100).toString() : ''
+  );
+  const [min, setMin] = useState(
+    initial?.min_payment_sen ? (initial.min_payment_sen / 100).toFixed(2) : ''
+  );
+
+  const bal_sen = money.parse(balance);
+  const apr_bps = Number.isFinite(Number(apr)) ? Math.round(Number(apr) * 100) : NaN;
+  const min_sen = money.parse(min);
+  const valid = name.trim() && bal_sen != null && bal_sen > 0 &&
+                Number.isFinite(apr_bps) && apr_bps >= 0 &&
+                min_sen != null && min_sen > 0;
+
+  const save = () => {
+    if (!valid) return;
+    onSave({
+      name: name.trim(), type,
+      balance_sen: bal_sen, apr_bps, min_payment_sen: min_sen,
+    });
+  };
+
+  const sym = currencySymbol(currency);
+  const rateLabel = islamic ? ed.profitRate : ed.apr;
+
+  return e('div', { className: 'card elevated fund-editor debt-editor' },
+    e('h3', null, initial ? ed.titleEdit : ed.titleNew),
+    e('div', { className: 'fe-row', style: { marginTop: 12 } },
+      e('div', { className: 'field' },
+        e('label', null, ed.name),
+        e('input', {
+          type: 'text', placeholder: ed.namePh, value: name,
+          onChange: (ev) => setName(ev.target.value), autoFocus: true,
+        }),
+      ),
+      e('div', { className: 'field' },
+        e('label', null, ed.type),
+        e('select', {
+          value: type, onChange: (ev) => setType(ev.target.value),
+        }, DEBT_TYPES.map(k => e('option', { key: k, value: k }, t.debts.types[k]))),
+      ),
+    ),
+    e('div', { className: 'fe-row' },
+      e('div', { className: 'field' },
+        e('label', null, ed.balance),
+        e('div', { className: 'money-input' },
+          e('span', { className: 'prefix' }, sym),
+          e('input', {
+            type: 'text', inputMode: 'decimal', value: balance,
+            onChange: (ev) => setBalance(ev.target.value),
+          }),
+        ),
+      ),
+      e('div', { className: 'field' },
+        e('label', null, rateLabel),
+        e('div', { className: 'money-input' },
+          e('span', { className: 'prefix' }, '%'),
+          e('input', {
+            type: 'text', inputMode: 'decimal', value: apr,
+            onChange: (ev) => setApr(ev.target.value),
+          }),
+        ),
+        e('div', { className: 'hint' }, ed.aprHint),
+      ),
+    ),
+    e('div', { className: 'fe-row' },
+      e('div', { className: 'field' },
+        e('label', null, ed.min),
+        e('div', { className: 'money-input' },
+          e('span', { className: 'prefix' }, sym),
+          e('input', {
+            type: 'text', inputMode: 'decimal', value: min,
+            onChange: (ev) => setMin(ev.target.value),
+          }),
+        ),
+      ),
+    ),
+    e('div', { className: 'actions' },
+      e('button', { className: 'ghost', type: 'button', onClick: onCancel }, t.debts.cancel),
+      e('button', { type: 'button', onClick: save, disabled: !valid }, t.debts.save),
+    ),
+  );
+}
+
+function DebtRow({ t, debt, currency, islamic, winning, onEdit, onDelete }) {
+  const [showAmort, setShowAmort] = useState(false);
+  const perDebt = winning?.perDebt.find(d => d.id === debt.id);
+  const sched = perDebt?.schedule ?? [];
+  const first = sched.slice(0, 12);
+  const last  = sched.length > 24 ? sched.slice(-12) : sched.slice(12);
+  const rateLabel = islamic ? t.debts.editor.profitRate : t.debts.editor.apr;
+
+  return e('div', { className: 'debt-row' },
+    e('div', { className: 'head' },
+      e('div', null,
+        e('div', { className: 'name' }, debt.name),
+        e('div', { className: 'type' }, t.debts.types[debt.type] ?? debt.type),
+      ),
+      e('div', { className: 'val' },
+        e('div', { className: 'k' }, t.debts.row.balance),
+        e('div', { className: 'v' }, money.format(debt.balance_sen, { currency })),
+      ),
+      e('div', { className: 'val' },
+        e('div', { className: 'k' }, t.debts.row.rate),
+        e('div', { className: 'v' }, (debt.apr_bps / 100).toFixed(2) + '%'),
+      ),
+      e('div', { className: 'val' },
+        e('div', { className: 'k' }, t.debts.row.min),
+        e('div', { className: 'v' }, money.format(debt.min_payment_sen, { currency })),
+      ),
+      e('div', { className: 'actions' },
+        e('button', {
+          className: 'icon-mini', type: 'button', title: 'Edit', 'aria-label': 'Edit',
+          onClick: () => onEdit(debt),
+        },
+          e('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+                     strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round',
+                     width: 15, height: 15, style: { display: 'block' } },
+            e('path', { d: 'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7' }),
+            e('path', { d: 'M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z' }),
+          ),
+        ),
+        e('button', {
+          className: 'icon-mini danger', type: 'button', title: 'Delete', 'aria-label': 'Delete',
+          onClick: () => onDelete(debt),
+        },
+          e('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+                     strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round',
+                     width: 15, height: 15, style: { display: 'block' } },
+            e('polyline', { points: '3 6 5 6 21 6' }),
+            e('path', { d: 'M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6' }),
+          ),
+        ),
+      ),
+    ),
+    winning && sched.length > 0 && e(React.Fragment, null,
+      e('button', {
+        className: 'amort-toggle', type: 'button',
+        onClick: () => setShowAmort(v => !v),
+      }, showAmort ? t.debts.row.amortHide : t.debts.row.amortToggle),
+      showAmort && e('div', { className: 'amort-table' },
+        e('table', null,
+          e('thead', null,
+            e('tr', null,
+              e('th', null, '#'),
+              e('th', null, 'Interest'),
+              e('th', null, 'Payment'),
+              e('th', null, 'Balance'),
+            ),
+          ),
+          e('tbody', null,
+            first.map((r, i) =>
+              e('tr', { key: 'f' + i },
+                e('td', null, r.month),
+                e('td', null, money.format(r.interest, { currency })),
+                e('td', null, money.format(r.payment,  { currency })),
+                e('td', null, money.format(r.balance,  { currency })),
+              )
+            ),
+            sched.length > 24 && e('tr', { key: 'gap', className: 'gap-row' },
+              e('td', { colSpan: 4 }, '… ' + (sched.length - 24) + ' more months …'),
+            ),
+            last.map((r, i) =>
+              e('tr', { key: 'l' + i },
+                e('td', null, r.month),
+                e('td', null, money.format(r.interest, { currency })),
+                e('td', null, money.format(r.payment,  { currency })),
+                e('td', null, money.format(r.balance,  { currency })),
+              )
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+function Debts({ t, currency, profile, updateProfile, debtsCol, toastPush }) {
+  const [editing, setEditing] = useState(null);
+  const [extraStr, setExtraStr] = useState('0');
+  const extra_sen = Math.max(0, money.parse(extraStr) ?? 0);
+  const islamic = !!profile.islamic_mode;
+
+  const totals = useMemo(() => {
+    let owed = 0, min = 0;
+    for (const d of debtsCol.rows) {
+      owed += d.balance_sen ?? 0;
+      min  += d.min_payment_sen ?? 0;
+    }
+    return { owed, min };
+  }, [debtsCol.rows]);
+
+  const activeDebts = useMemo(() => debtsCol.rows.filter(d => (d.balance_sen ?? 0) > 0), [debtsCol.rows]);
+
+  const snowball  = useMemo(() => activeDebts.length ? simulateDebts(activeDebts, 'snowball',  extra_sen) : null, [activeDebts, extra_sen]);
+  const avalanche = useMemo(() => activeDebts.length ? simulateDebts(activeDebts, 'avalanche', extra_sen) : null, [activeDebts, extra_sen]);
+
+  // Winner = lower total interest. Ties broken by fewer months.
+  let winnerKey = null, savings_sen = 0;
+  if (snowball && avalanche) {
+    if (avalanche.total_interest_sen < snowball.total_interest_sen) {
+      winnerKey = 'avalanche';
+      savings_sen = snowball.total_interest_sen - avalanche.total_interest_sen;
+    } else if (snowball.total_interest_sen < avalanche.total_interest_sen) {
+      winnerKey = 'snowball';
+      savings_sen = avalanche.total_interest_sen - snowball.total_interest_sen;
+    } else if (avalanche.months < snowball.months) {
+      winnerKey = 'avalanche';
+    } else if (snowball.months < avalanche.months) {
+      winnerKey = 'snowball';
+    }
+  }
+  const winning = winnerKey === 'snowball' ? snowball : winnerKey === 'avalanche' ? avalanche : (snowball || avalanche);
+
+  const upsert = async (data) => {
+    if (editing === 'new')     await debtsCol.add(data);
+    else if (editing)          await debtsCol.update(editing.id, data);
+    setEditing(null);
+  };
+  const del = async (debt) => {
+    if (!confirm(t.debts.confirmDelete)) return;
+    await debtsCol.remove(debt.id);
+    toastPush({
+      message: t.debts.deletedToast, undoLabel: t.txn.undo,
+      onUndo: () => debtsCol.restore(debt), durationMs: 5000,
+    });
+  };
+
+  const sym = currencySymbol(currency);
+  const isEmpty = debtsCol.rows.length === 0 && !editing;
+
+  const strategyCard = (sim, key, badgeCls, badgeLabel) => e('div', {
+    className: 'card elevated strategy-card' + (winnerKey === key ? ' winner' : ''),
+    key,
+  },
+    e('div', { className: 'head' },
+      e('span', { className: 'badge ' + badgeCls }, badgeLabel),
+      e('h3', { className: 'title' }, t.debts.strat[key]),
+      winnerKey === key && e('span', { className: 'winner-pill' }, t.debts.strat.winner),
+    ),
+    e('div', { className: 'stats' },
+      e('div', null,
+        e('div', { className: 'k' }, t.debts.strat.debtFree),
+        e('div', { className: 'v' }, sim ? formatDate(sim.debt_free_iso) : '—'),
+      ),
+      e('div', null,
+        e('div', { className: 'k' }, ''),
+        e('div', { className: 'v' }, sim ? fmt(t.debts.strat.months, { n: sim.months }) : ''),
+      ),
+      e('div', null,
+        e('div', { className: 'k' }, t.debts.strat.totalInterest),
+        e('div', { className: 'v' }, sim ? money.format(sim.total_interest_sen, { currency }) : '—'),
+      ),
+    ),
+  );
+
+  return e(React.Fragment, null,
+    e('div', { className: 'view-header' },
+      e('h2', null, t.debts.title),
+      e('div', { className: 'actions' },
+        e('div', { className: 'seg-toggle', title: t.debts.islamic.hint, style: { marginRight: 8 } },
+          e('button', {
+            type: 'button', className: !islamic ? 'active' : '',
+            onClick: () => updateProfile({ islamic_mode: false }),
+          }, t.debts.editor.apr),
+          e('button', {
+            type: 'button', className: islamic ? 'active' : '',
+            onClick: () => updateProfile({ islamic_mode: true }),
+          }, t.debts.editor.profitRate),
+        ),
+        !editing && !isEmpty && e('button', { type: 'button', onClick: () => setEditing('new') }, t.debts.new),
+      ),
+    ),
+
+    editing && e(DebtEditor, {
+      t, currency, islamic,
+      initial: editing === 'new' ? null : editing,
+      onCancel: () => setEditing(null), onSave: upsert,
+    }),
+
+    isEmpty
+      ? e('div', { className: 'card elevated empty' },
+          e('svg', { className: 'illus', viewBox: '0 0 96 96', fill: 'none',
+                     stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round',
+                     'aria-hidden': 'true' },
+            e('path', { d: 'M20 40h56v36H20zM28 40V28a20 20 0 0 1 40 0v12' }),
+          ),
+          e('h3', null, t.debts.empty.title),
+          e('p', null, t.debts.empty.note),
+          e('div', { className: 'empty-actions' },
+            e('button', { type: 'button', onClick: () => setEditing('new') }, t.debts.addFirst),
+          ),
+        )
+      : e(React.Fragment, null,
+          !editing && e('div', { className: 'debts-hero' },
+            e('div', { className: 'totals-inline' },
+              e('div', { className: 'kv' },
+                e('div', { className: 'k' }, t.debts.totals.totalOwed),
+                e('div', { className: 'v' }, money.format(totals.owed, { currency })),
+              ),
+              e('div', { className: 'kv' },
+                e('div', { className: 'k' }, t.debts.totals.totalMin),
+                e('div', { className: 'v' }, money.format(totals.min, { currency })),
+              ),
+            ),
+          ),
+
+          !editing && e('div', { className: 'strategy-primer' },
+            e('h4', null, t.debts.primer.title),
+            e('p', null, t.debts.primer.sub),
+            e('div', { className: 'grid2', style: { marginTop: 14 } },
+              e('div', { className: 'col snowball' },
+                e('span', { className: 'badge' }, t.debts.primer.snowball.badge),
+                e('span', { style: { fontWeight: 600, color: 'var(--ink)' } }, t.debts.primer.snowball.h),
+                e('p', { style: { marginTop: 6 } }, t.debts.primer.snowball.p),
+              ),
+              e('div', { className: 'col avalanche' },
+                e('span', { className: 'badge' }, t.debts.primer.avalanche.badge),
+                e('span', { style: { fontWeight: 600, color: 'var(--ink)' } }, t.debts.primer.avalanche.h),
+                e('p', { style: { marginTop: 6 } }, t.debts.primer.avalanche.p),
+              ),
+            ),
+          ),
+
+          !editing && activeDebts.length > 0 && e('div', { className: 'extra-slider' },
+            e('div', { className: 'row1' },
+              e('div', { className: 'title' }, t.debts.extra.title),
+              e('div', { className: 'hint' }, t.debts.extra.hint),
+            ),
+            e('div', { className: 'row2' },
+              e('input', {
+                type: 'range', min: 0, max: 3000, step: 50,
+                value: Math.min(3000, extra_sen / 100),
+                onChange: (ev) => setExtraStr(String(Number(ev.target.value))),
+                'aria-label': t.debts.extra.title,
+              }),
+              e('label', { className: 'amount-cell' },
+                e('span', { className: 'prefix' }, sym),
+                e('input', {
+                  type: 'text', inputMode: 'decimal', value: extraStr,
+                  onChange: (ev) => setExtraStr(ev.target.value),
+                  onBlur: () => {
+                    const v = Math.max(0, money.parse(extraStr) ?? 0);
+                    setExtraStr(((v / 100) | 0).toString());
+                  },
+                }),
+              ),
+            ),
+          ),
+
+          !editing && activeDebts.length > 0 && e('div', { className: 'strategy-grid' },
+            strategyCard(snowball,  'snowball',  'snowball',  t.debts.primer.snowball.badge),
+            strategyCard(avalanche, 'avalanche', 'avalanche', t.debts.primer.avalanche.badge),
+          ),
+
+          !editing && winnerKey && savings_sen > 0 && e('div', { className: 'savings-callout' },
+            e('span', { className: 'amt' }, money.format(savings_sen, { currency })),
+            e('span', { className: 'msg' },
+              fmt(t.debts.strat.savings, {
+                amount: money.format(savings_sen, { currency }),
+                name: t.debts.strat[winnerKey],
+              }),
+            ),
+          ),
+          !editing && snowball && avalanche && savings_sen === 0 && e('div', { className: 'savings-callout' },
+            e('span', { className: 'msg' }, t.debts.strat.savingsSame),
+          ),
+
+          !editing && e('div', { className: 'debt-list', style: { marginTop: 4 } },
+            debtsCol.rows.map(d =>
+              e(DebtRow, {
+                key: d.id, t, debt: d, currency, islamic,
+                winning,
+                onEdit: setEditing, onDelete: del,
+              })
+            ),
+          ),
+        ),
+  );
+}
+
+/* =========================================================================
+ * Sinking funds — icons, math, view
+ * ========================================================================= */
+
+// Lucide-style thin-stroke icons. Keys used as `icon` on the fund doc.
+const FUND_ICONS = {
+  piggy:     'M17 6c1.7 0 3 1.3 3 3v6c0 1.7-1.3 3-3 3h-1l-1 3h-3l-1-3H8c-2.8 0-5-2.2-5-5s2.2-5 5-5h1c1-1 3-2 5-2m0 2c-1 0-2 1-2 2m-2 3h.01',
+  moon:      'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z',
+  car:       'M5 17h14M6 17v-4l2-6h8l2 6v4M7 17v2M17 17v2M8 13h8',
+  laptop:    'M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10H4V6zM2 18h20l-1 2H3l-1-2z',
+  baby:      'M9 12h.01M15 12h.01M10 16c.5.6 1.3 1 2 1s1.5-.4 2-1M5 12a7 7 0 0 1 14 0v0a7 7 0 0 1-14 0zM12 3v2',
+  shield:    'M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z',
+  cap:       'M22 10L12 5 2 10l10 5 10-5z M6 12v5c0 1 3 3 6 3s6-2 6-3v-5',
+  heart:     'M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z',
+  plane:     'M17.8 19.8L21 21l-1.2-3.2M15 6.5L9 3l-2 2 4 5-5 1v3l6-2 3 5 2-2-3-6 6-4-1-3z',
+  home:      'M3 12l9-9 9 9M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10',
+};
+const FUND_ICON_ORDER = Object.keys(FUND_ICONS);
+
+function FundIcon({ name, size = 20 }) {
+  const d = FUND_ICONS[name] || FUND_ICONS.piggy;
+  return e('svg', {
+    // Explicit width/height attributes give the SVG intrinsic dimensions,
+    // so flex containers (like `.icon-opt`) can't collapse it to 0.
+    width: size, height: size,
+    viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+    strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round',
+    'aria-hidden': 'true',
+    style: { display: 'block', flexShrink: 0 },
+  }, e('path', { d }));
+}
+
+function monthsBetween(fromIso, toIso) {
+  const f = new Date(fromIso), tt = new Date(toIso);
+  if (isNaN(f) || isNaN(tt)) return 0;
+  return Math.max(0,
+    (tt.getFullYear() - f.getFullYear()) * 12 +
+    (tt.getMonth()    - f.getMonth()) +
+    (tt.getDate() >= f.getDate() ? 0 : -1)
+  );
+}
+
+function computeFundState(fund, transactions) {
+  const todayIso = new Date().toISOString().slice(0, 10);
+
+  // Manual contributions from the fund doc
+  const manualContribs = fund.contributions ?? [];
+  const manual_sen = manualContribs.reduce((a, c) => a + (c.amount_sen || 0), 0);
+
+  // Auto contributions from a linked category (savings-bucket transactions).
+  // We treat any savings-side transaction (amount_sen < 0) as a contribution.
+  let linked_sen = 0;
+  let linkedCount = 0;
+  if (fund.linked_category_id) {
+    for (const tx of transactions) {
+      if (tx.category_id !== fund.linked_category_id) continue;
+      if (tx.amount_sen >= 0) continue;
+      linked_sen += Math.abs(tx.amount_sen);
+      linkedCount++;
+    }
+  }
+
+  const saved_sen  = manual_sen + linked_sen;
+  const remaining_sen = Math.max(0, (fund.target_sen ?? 0) - saved_sen);
+  const done = saved_sen >= (fund.target_sen ?? 0);
+
+  const months_remaining = fund.target_date ? monthsBetween(todayIso, fund.target_date) : 0;
+  const required_monthly_sen = done ? 0 : sinkingRequiredMonthly_sen(remaining_sen, Math.max(1, months_remaining));
+
+  // Progress + expected progress (elapsed / total)
+  const total_months = fund.created_at && fund.target_date
+    ? Math.max(1, monthsBetween(fund.created_at, fund.target_date))
+    : 12;
+  const elapsed_months = fund.created_at
+    ? Math.max(0, monthsBetween(fund.created_at, todayIso))
+    : 0;
+  const expected_pct = Math.min(100, (elapsed_months / total_months) * 100);
+  const actual_pct = fund.target_sen > 0 ? (saved_sen / fund.target_sen) * 100 : 0;
+
+  let status = 'ontrack';
+  if (done) status = 'done';
+  else if (actual_pct >= expected_pct + 5) status = 'ahead';
+  else if (actual_pct < expected_pct - 5) status = 'behind';
+
+  // Projected completion at current pace
+  let projected_iso = null;
+  if (!done && elapsed_months > 0 && saved_sen > 0) {
+    const monthly_pace = saved_sen / elapsed_months;
+    if (monthly_pace > 0) {
+      const months_to_go = Math.ceil(remaining_sen / monthly_pace);
+      const d = new Date();
+      d.setMonth(d.getMonth() + months_to_go);
+      projected_iso = d.toISOString().slice(0, 10);
+    }
+  } else if (done) {
+    projected_iso = todayIso;
+  }
+
+  return {
+    saved_sen, remaining_sen, manual_sen, linked_sen, linkedCount,
+    required_monthly_sen, months_remaining,
+    actual_pct: Math.min(100, actual_pct), expected_pct,
+    status, projected_iso, done,
+  };
+}
+
+function FundEditor({ t, categories, initial, currency, onCancel, onSave }) {
+  const ed = t.funds.editor;
+  const [name, setName] = useState(initial?.name ?? '');
+  const [amount, setAmount] = useState(
+    initial?.target_sen ? (initial.target_sen / 100).toFixed(2) : ''
+  );
+  const [date, setDate] = useState(
+    initial?.target_date ?? new Date(new Date().getFullYear() + 1, new Date().getMonth(), new Date().getDate()).toISOString().slice(0, 10)
+  );
+  const [icon, setIcon] = useState(initial?.icon ?? 'piggy');
+  const [linked, setLinked] = useState(initial?.linked_category_id ?? '');
+
+  const target_sen = money.parse(amount);
+  const valid = name.trim() && target_sen && target_sen > 0 && date;
+
+  const savingsCats = categories.filter(c => c.bucket === 'savings' && !c.archived);
+
+  const save = () => {
+    if (!valid) return;
+    onSave({
+      name: name.trim(),
+      target_sen,
+      target_date: date,
+      icon,
+      linked_category_id: linked || null,
+    });
+  };
+
+  const sym = currencySymbol(currency);
+
+  return e('div', { className: 'card elevated fund-editor' },
+    e('h3', null, initial ? ed.titleEdit : ed.titleNew),
+    e('div', { className: 'fe-row', style: { marginTop: 12 } },
+      e('div', { className: 'field' },
+        e('label', null, ed.name),
+        e('input', {
+          type: 'text', placeholder: ed.namePh, value: name,
+          onChange: (ev) => setName(ev.target.value),
+          autoFocus: true,
+        }),
+      ),
+      e('div', { className: 'field' },
+        e('label', null, ed.target),
+        e('div', { className: 'money-input' },
+          e('span', { className: 'prefix' }, sym),
+          e('input', {
+            type: 'text', inputMode: 'decimal',
+            placeholder: ed.targetPh, value: amount,
+            onChange: (ev) => setAmount(ev.target.value),
+          }),
+        ),
+      ),
+    ),
+    e('div', { className: 'fe-row' },
+      e('div', { className: 'field' },
+        e('label', null, ed.date),
+        e('input', {
+          type: 'date', value: date,
+          onChange: (ev) => setDate(ev.target.value),
+        }),
+      ),
+      e('div', { className: 'field' },
+        e('label', null, ed.linked),
+        e('select', {
+          value: linked, onChange: (ev) => setLinked(ev.target.value),
+        },
+          e('option', { value: '' }, ed.linkedNone),
+          savingsCats.map(c => e('option', { key: c.id, value: c.id }, c.name)),
+        ),
+      ),
+    ),
+    e('div', { className: 'field', style: { marginTop: 4 } },
+      e('label', null, ed.icon),
+      e('div', { className: 'icon-picker' },
+        FUND_ICON_ORDER.map(k =>
+          e('button', {
+            key: k, type: 'button',
+            className: 'icon-opt' + (icon === k ? ' selected' : ''),
+            'aria-pressed': icon === k, 'aria-label': k,
+            onClick: () => setIcon(k),
+          }, e(FundIcon, { name: k }))
+        )
+      ),
+    ),
+    e('div', { className: 'actions' },
+      e('button', { className: 'ghost', type: 'button', onClick: onCancel }, t.funds.cancel),
+      e('button', { type: 'button', onClick: save, disabled: !valid }, t.funds.save),
+    ),
+  );
+}
+
+function FundCard({ t, fund, transactions, categories, currency, onEdit, onDelete, onLogContrib, onRemoveContrib }) {
+  const s = computeFundState(fund, transactions);
+  const catById = useMemo(() => Object.fromEntries(categories.map(c => [c.id, c])), [categories]);
+  const linkedCat = fund.linked_category_id ? catById[fund.linked_category_id] : null;
+
+  const [logOpen, setLogOpen] = useState(false);
+  const [amt, setAmt] = useState('');
+  const [dt, setDt]  = useState(new Date().toISOString().slice(0, 10));
+
+  const commitContrib = () => {
+    const sen = money.parse(amt);
+    if (sen == null || sen <= 0) return;
+    onLogContrib({ date: dt, amount_sen: sen });
+    setAmt('');
+  };
+
+  const statusLabel = t.funds.status[s.status] ?? '';
+  const statusClass = 'status-' + s.status;
+  const sym = currencySymbol(currency);
+
+  return e('div', { className: 'card elevated fund-card ' + statusClass },
+    e('div', { className: 'head' },
+      e('div', { className: 'icon-wrap' }, e(FundIcon, { name: fund.icon })),
+      e('div', { style: { flex: 1, minWidth: 0 } },
+        e('h3', { className: 'name' }, fund.name),
+        e('div', { className: 'meta' },
+          fund.target_date ? formatDate(fund.target_date) : '—',
+          linkedCat ? ' · ' + linkedCat.name : ''
+        ),
+      ),
+      e('div', { className: 'actions' },
+        e('button', {
+          className: 'icon-mini', type: 'button', title: 'Edit', 'aria-label': 'Edit',
+          onClick: () => onEdit(fund),
+        },
+          e('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+                     strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' },
+            e('path', { d: 'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7' }),
+            e('path', { d: 'M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z' }),
+          )
+        ),
+        e('button', {
+          className: 'icon-mini danger', type: 'button', title: 'Delete', 'aria-label': 'Delete',
+          onClick: () => onDelete(fund),
+        },
+          e('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+                     strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' },
+            e('polyline', { points: '3 6 5 6 21 6' }),
+            e('path', { d: 'M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6' }),
+            e('path', { d: 'M10 11v6M14 11v6' }),
+          )
+        ),
+      ),
+    ),
+    e('div', { className: 'progress-track', 'aria-label': 'progress' },
+      e('div', { className: 'progress-fill', style: { width: s.actual_pct + '%' } })
+    ),
+    e('div', { className: 'amounts' },
+      e('span', { className: 'saved' }, money.format(s.saved_sen, { currency })),
+      e('span', { className: 'target' }, '/ ' + money.format(fund.target_sen, { currency })),
+    ),
+    e('div', { className: 'stats-row' },
+      e('div', { className: 'stat' },
+        e('div', { className: 'lbl' }, t.funds.stats.required),
+        e('div', { className: 'val' },
+          s.done ? '—' : money.format(s.required_monthly_sen, { currency })
+        ),
+      ),
+      e('div', { className: 'stat' },
+        e('div', { className: 'lbl' }, t.funds.stats.toGo),
+        e('div', { className: 'val' }, money.format(s.remaining_sen, { currency })),
+      ),
+      e('div', { className: 'stat' },
+        e('div', { className: 'lbl' }, t.funds.stats.projected),
+        e('div', { className: 'val' }, s.projected_iso ? formatDate(s.projected_iso) : '—'),
+      ),
+    ),
+    e('div', { className: 'footer' },
+      e('span', { className: 'status-badge ' + s.status }, statusLabel),
+      e('button', {
+        className: 'ghost push-right', type: 'button',
+        onClick: () => setLogOpen(v => !v),
+      }, t.funds.log.toggle),
+    ),
+
+    logOpen && e('div', { className: 'contrib-log' },
+      e('h5', null, t.funds.log.title),
+      (fund.contributions?.length ?? 0) === 0
+        ? e('p', { className: 'muted', style: { margin: 0, fontSize: 13 } }, t.funds.log.emptyLog)
+        : e('ul', null,
+            (fund.contributions ?? []).slice().reverse().map((c, i) =>
+              e('li', { key: (fund.contributions.length - 1 - i) },
+                e('span', null,
+                  e('span', { className: 'date' }, formatDate(c.date) + ' '),
+                ),
+                e('span', null,
+                  money.format(c.amount_sen, { currency }),
+                  e('button', {
+                    className: 'del', type: 'button', 'aria-label': 'Remove',
+                    onClick: () => onRemoveContrib(fund, fund.contributions.length - 1 - i),
+                  }, '×'),
+                ),
+              )
+            ),
+          ),
+      linkedCat && s.linkedCount > 0 && e('div', { className: 'muted', style: { fontSize: 12, marginTop: 8 } },
+        fmt(t.funds.log.totalLinked, { name: linkedCat.name }) + ': ' + money.format(s.linked_sen, { currency }) + ` (${s.linkedCount})`
+      ),
+      e('div', { className: 'add-contrib' },
+        e('input', {
+          type: 'date', value: dt, onChange: (ev) => setDt(ev.target.value),
+          'aria-label': t.funds.editor.date,
+        }),
+        e('input', {
+          type: 'text', inputMode: 'decimal', placeholder: sym + ' 0.00',
+          value: amt, onChange: (ev) => setAmt(ev.target.value),
+          onKeyDown: (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); commitContrib(); } },
+          'aria-label': t.funds.log.addPh,
+        }),
+        e('button', { type: 'button', onClick: commitContrib, disabled: !money.parse(amt) }, '+'),
+      ),
+    ),
+  );
+}
+
+function Funds({ t, currency, fundsCol, categories, transactions, toastPush }) {
+  const [editing, setEditing] = useState(null); // null | 'new' | {id...}
+
+  const openNew = () => setEditing('new');
+  const closeEditor = () => setEditing(null);
+
+  const upsert = async (data) => {
+    if (editing === 'new') {
+      await fundsCol.add({
+        ...data,
+        contributions: [],
+        created_at: new Date().toISOString().slice(0, 10),
+      });
+    } else if (editing) {
+      await fundsCol.update(editing.id, data);
+    }
+    closeEditor();
+  };
+
+  const deleteFund = async (fund) => {
+    if (!confirm(t.funds.confirmDelete)) return;
+    await fundsCol.remove(fund.id);
+    toastPush({
+      message: t.funds.deletedToast,
+      undoLabel: t.txn.undo,
+      onUndo: () => fundsCol.restore(fund),
+    });
+  };
+
+  const logContrib = async (fund, contrib) => {
+    const next = [...(fund.contributions ?? []), contrib];
+    await fundsCol.update(fund.id, { contributions: next });
+  };
+  const removeContrib = async (fund, idx) => {
+    const next = (fund.contributions ?? []).filter((_, i) => i !== idx);
+    await fundsCol.update(fund.id, { contributions: next });
+  };
+
+  // Totals across all funds
+  const totals = useMemo(() => {
+    let saved = 0, target = 0;
+    for (const f of fundsCol.rows) {
+      const s = computeFundState(f, transactions);
+      saved  += s.saved_sen;
+      target += f.target_sen ?? 0;
+    }
+    return { saved, target, count: fundsCol.rows.length };
+  }, [fundsCol.rows, transactions]);
+
+  const isEmpty = fundsCol.rows.length === 0 && !editing;
+
+  return e(React.Fragment, null,
+    e('div', { className: 'view-header' },
+      e('h2', null, t.funds.title),
+      e('div', { className: 'actions' },
+        !editing && !isEmpty && e('button', { type: 'button', onClick: openNew }, t.funds.new),
+      ),
+    ),
+
+    editing && e(FundEditor, {
+      t, categories, currency,
+      initial: editing === 'new' ? null : editing,
+      onCancel: closeEditor,
+      onSave: upsert,
+    }),
+
+    !editing && !isEmpty && e('div', { className: 'fund-totals' },
+      e('div', { className: 'stat' },
+        e('div', { className: 'label' }, t.funds.totals.totalSaved),
+        e('div', { className: 'value' }, money.format(totals.saved, { currency })),
+      ),
+      e('div', { className: 'stat' },
+        e('div', { className: 'label' }, t.funds.totals.totalTarget),
+        e('div', { className: 'value' }, money.format(totals.target, { currency })),
+      ),
+      e('div', { className: 'stat' },
+        e('div', { className: 'label' }, t.funds.totals.activeFunds),
+        e('div', { className: 'value' }, String(totals.count)),
+      ),
+    ),
+
+    isEmpty
+      ? e('div', { className: 'card elevated empty' },
+          e('svg', { className: 'illus', viewBox: '0 0 96 96', fill: 'none',
+                     stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round',
+                     'aria-hidden': 'true' },
+            e('path', { d: 'M64 30c6 0 12 5 12 12v22c0 6-5 12-12 12h-4l-4 10h-10l-4-10H30c-10 0-18-8-18-18s8-18 18-18h4c4-4 12-8 20-8m0 6c-4 0-8 4-8 8m-6 12h.05' }),
+          ),
+          e('h3', null, t.funds.empty.title),
+          e('p', null, t.funds.empty.note),
+          e('div', { className: 'empty-actions' },
+            e('button', { type: 'button', onClick: openNew }, t.funds.empty.cta),
+          ),
+        )
+      : e('div', { className: 'fund-list' },
+          fundsCol.rows.map(f =>
+            e(FundCard, {
+              key: f.id, t, fund: f, transactions, categories, currency,
+              onEdit: (fund) => setEditing(fund),
+              onDelete: deleteFund,
+              onLogContrib: (contrib) => logContrib(f, contrib),
+              onRemoveContrib: removeContrib,
+            })
+          ),
+        ),
+  );
+}
+
+function Dashboard({ t, profile, transactions, categories, funds, onNav, onFilterLedger }) {
+  const income = profile.income_sen ?? 0;
+  const [needs_sen, wants_sen, savings_sen] = money.splitExact(income,
+    [profile.split.needs, profile.split.wants, profile.split.savings]);
+
+  const now = new Date();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const daysLeft = daysInMonth - now.getDate();
+
+  // Roll up current-month spend per bucket, using category→bucket lookup.
+  const catBucket = useMemo(() =>
+    Object.fromEntries(categories.map(c => [c.id, c.bucket])), [categories]);
+
+  const spent = useMemo(() => {
+    const ym = now.toISOString().slice(0, 7); // YYYY-MM
+    const acc = { needs: 0, wants: 0, savings: 0 };
+    for (const txn of transactions) {
+      if (!txn.date || !txn.date.startsWith(ym)) continue;
+      if (txn.amount_sen >= 0) continue; // ignore income for spend meters
+      const bucket = catBucket[txn.category_id];
+      if (!bucket || !(bucket in acc)) continue;
+      acc[bucket] += Math.abs(txn.amount_sen);
+    }
+    return acc;
+  }, [transactions, catBucket]);
+
+  if (!income) {
+    return e('div', { className: 'card elevated' },
+      e('h2', null, t.dashboard.title),
+      e('p', { className: 'muted' }, t.empty.dashboard),
+      e('div', { style: { marginTop: 16 } },
+        e('button', { onClick: () => onNav('settings') }, t.cta.setIncome)
+      )
+    );
+  }
+
+  // First off-pace / not-done fund → gentle nudge on the dashboard.
+  const nudge = useMemo(() => {
+    for (const f of (funds ?? [])) {
+      const s = computeFundState(f, transactions);
+      if (!s.done && s.required_monthly_sen > 0) {
+        return { fund: f, amount_sen: s.required_monthly_sen, icon: f.icon };
+      }
+    }
+    return null;
+  }, [funds, transactions]);
+
+  return e('div', { className: 'grid' },
+    e('div', { className: 'card elevated' },
+      e('h2', null, t.dashboard.title),
+      e(Meter, { label: t.dashboard.needs,   spent_sen: spent.needs,   budget_sen: needs_sen,   daysLeft, t }),
+      e(Meter, { label: t.dashboard.wants,   spent_sen: spent.wants,   budget_sen: wants_sen,   daysLeft, t }),
+      e(Meter, { label: t.dashboard.savings, spent_sen: spent.savings, budget_sen: savings_sen, daysLeft, t }),
+      e('p', { className: 'muted', style: { marginTop: 12 } },
+        `${daysLeft} ${t.dashboard.daysLeft}`
+      )
+    ),
+    nudge && e('div', {
+      className: 'fund-nudge', role: 'button', tabIndex: 0,
+      onClick: () => onNav('funds'),
+      onKeyDown: (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onNav('funds'); } },
+      style: { cursor: 'pointer' },
+    },
+      e('div', { className: 'icon-wrap' }, e(FundIcon, { name: nudge.icon })),
+      e('div', { className: 'text' },
+        e('div', { className: 'name' }, nudge.fund.name),
+        e('div', { className: 'msg' },
+          fmt(t.funds.dashboardNudge, {
+            amount: money.format(nudge.amount_sen, { currency: profile.currency }),
+            name: nudge.fund.name,
+          })
+        ),
+      ),
+    ),
+    e(ExpenseDistribution, {
+      t, currency: profile.currency,
+      transactions, categories,
+      onFilterLedger,
+    }),
+  );
+}
+
+/* =========================================================================
+ * OnboardingWizard — 4 steps. Income required, everything else skippable.
+ * ========================================================================= */
+function OnboardingWizard({ t, profile, updateProfile, categoriesCol, accountsCol, onDone, onSkipSession }) {
+  const w = t.wizard;
+  const [step, setStep] = useState(1);
+  const total = 4;
+
+  // Step 1 — income (draft in RM string, parsed to sen on Next/Finish)
+  const [incomeStr, setIncomeStr] = useState(
+    profile.income_sen ? (profile.income_sen / 100).toFixed(2) : ''
+  );
+  const income_sen = money.parse(incomeStr);
+  const incomeValid = income_sen != null && income_sen > 0;
+  const [incomeError, setIncomeError] = useState('');
+
+  // Step 2 — currency
+  const [currency, setCurrency] = useState(profile.currency ?? 'MYR');
+
+  // Step 3 — accounts: presets keyed by name → { selected, balance_str }
+  const [presetState, setPresetState] = useState({});
+  const [customAccounts, setCustomAccounts] = useState([]); // [{name, balance_str}]
+  const [customDraft, setCustomDraft] = useState('');
+
+  const togglePreset = (name) => {
+    setPresetState((s) => {
+      const cur = s[name] ?? { selected: false, balance_str: '' };
+      return { ...s, [name]: { ...cur, selected: !cur.selected } };
+    });
+  };
+  const setPresetBalance = (name, v) => {
+    setPresetState((s) => {
+      const cur = s[name] ?? { selected: true, balance_str: '' };
+      return { ...s, [name]: { ...cur, selected: true, balance_str: v } };
+    });
+  };
+  const addCustom = () => {
+    const name = customDraft.trim();
+    if (!name) return;
+    setCustomAccounts((a) => [...a, { name, balance_str: '' }]);
+    setCustomDraft('');
+  };
+  const setCustomBalance = (idx, v) => {
+    setCustomAccounts((a) => a.map((x, i) => i === idx ? { ...x, balance_str: v } : x));
+  };
+  const removeCustom = (idx) => {
+    setCustomAccounts((a) => a.filter((_, i) => i !== idx));
+  };
+
+  // Category preview groups (from DEFAULTS.categoriesSeed)
+  const catsByBucket = useMemo(() => ({
+    needs:   DEFAULTS.categoriesSeed.filter(c => c.bucket === 'needs'),
+    wants:   DEFAULTS.categoriesSeed.filter(c => c.bucket === 'wants'),
+    savings: DEFAULTS.categoriesSeed.filter(c => c.bucket === 'savings'),
+  }), []);
+
+  const goNext = () => {
+    if (step === 1) {
+      if (!incomeValid) { setIncomeError(w.incomeRequired); return; }
+      setIncomeError('');
+      updateProfile({ income_sen });
+    }
+    if (step === 2) updateProfile({ currency });
+    setStep((s) => Math.min(total, s + 1));
+  };
+  const goBack = () => setStep((s) => Math.max(1, s - 1));
+
+  const finish = async () => {
+    // Persist income + currency once more just in case Next wasn't clicked.
+    if (incomeValid) updateProfile({ income_sen });
+    updateProfile({ currency });
+
+    // Write chosen accounts — through the collection hook so React state
+    // (which Settings reads from) stays in sync with the db.
+    const chosen = [
+      ...Object.entries(presetState)
+        .filter(([, v]) => v.selected)
+        .map(([name, v]) => {
+          const preset = ACCOUNT_PRESETS.find(p => p.name === name);
+          return {
+            name,
+            type: preset?.type ?? 'cash',
+            institution: name,
+            opening_balance_sen: money.parse(v.balance_str) ?? 0,
+            currency,
+            archived: false,
+          };
+        }),
+      ...customAccounts.map(a => ({
+        name: a.name,
+        type: 'cash',
+        institution: '',
+        opening_balance_sen: money.parse(a.balance_str) ?? 0,
+        currency,
+        archived: false,
+      })),
+    ];
+    for (const acct of chosen) {
+      await accountsCol.add(acct);
+    }
+
+    // Seed categories via the hook, but only when the collection is empty —
+    // otherwise a re-run of the wizard would double-seed.
+    if (categoriesCol.rows.length === 0) {
+      for (const cat of DEFAULTS.categoriesSeed) {
+        await categoriesCol.add({ ...cat, archived: false });
+      }
+    }
+
+    updateProfile({ onboarding_done: true });
+    onDone();
+  };
+
+  const stepDot = (i) =>
+    e('div', {
+      key: i, className: 'dot' + (i < step ? ' done' : i === step ? ' current' : ''),
+      'aria-current': i === step ? 'step' : undefined,
+    });
+
+  const bodyByStep = () => {
+    if (step === 1) return e(React.Fragment, null,
+      e('div', { className: 'step-label' }, w.step1Label),
+      e('h1', null, w.step1Title),
+      e('p', { className: 'subhead' }, w.step1Sub),
+      e('div', { className: 'field' },
+        e('label', { htmlFor: 'wiz-income' }, w.incomeLabel),
+        e('div', { className: 'money-input' },
+          e('span', { className: 'prefix' }, currencySymbol(currency)),
+          e('input', {
+            id: 'wiz-income', type: 'text', inputMode: 'decimal',
+            placeholder: '5,000.00', value: incomeStr,
+            onChange: (ev) => { setIncomeStr(ev.target.value); if (incomeError) setIncomeError(''); },
+            onBlur: () => {
+              if (incomeValid) setIncomeStr((income_sen / 100).toFixed(2));
+            },
+            'aria-invalid': !!incomeError,
+          }),
+        ),
+        e('div', { className: 'hint' + (incomeError ? ' ' : '') , style: incomeError ? { color: 'var(--danger)' } : null },
+          incomeError || w.incomeHint
+        )
+      )
+    );
+
+    if (step === 2) return e(React.Fragment, null,
+      e('div', { className: 'step-label' }, w.step2Label),
+      e('h1', null, w.step2Title),
+      e('p', { className: 'subhead' }, w.step2Sub),
+      e('div', { className: 'field' },
+        e('label', { htmlFor: 'wiz-currency' }, w.currencyLabel),
+        e('select', {
+          id: 'wiz-currency', value: currency,
+          onChange: (ev) => setCurrency(ev.target.value),
+        }, CURRENCIES.map(c => e('option', { key: c.code, value: c.code }, c.label)))
+      )
+    );
+
+    if (step === 3) {
+      const sym = currencySymbol(currency);
+      const selectedNames = Object.entries(presetState).filter(([, v]) => v.selected).map(([n]) => n);
+      return e(React.Fragment, null,
+        e('div', { className: 'step-label' }, w.step3Label),
+        e('h1', null, w.step3Title),
+        e('p', { className: 'subhead' }, w.step3Sub),
+        e('div', { className: 'chips' },
+          ACCOUNT_PRESETS.map(p =>
+            e('button', {
+              key: p.name, type: 'button',
+              className: 'chip' + ((presetState[p.name]?.selected) ? ' selected' : ''),
+              'aria-pressed': !!presetState[p.name]?.selected,
+              onClick: () => togglePreset(p.name),
+            }, p.name)
+          )
+        ),
+        (selectedNames.length > 0 || customAccounts.length > 0) && e('div', { className: 'accounts-list' },
+          selectedNames.map(name =>
+            e('div', { key: name, className: 'row' },
+              e('span', { className: 'name' }, name),
+              e('label', { className: 'balance-input', 'aria-label': w.openingBalance + ' ' + name },
+                e('span', { className: 'prefix' }, sym),
+                e('input', {
+                  type: 'text', inputMode: 'decimal',
+                  placeholder: '0.00',
+                  value: presetState[name]?.balance_str ?? '',
+                  onChange: (ev) => setPresetBalance(name, ev.target.value),
+                })
+              ),
+              e('button', {
+                type: 'button', className: 'remove',
+                'aria-label': 'Remove ' + name,
+                onClick: () => togglePreset(name),
+              }, '×')
+            )
+          ),
+          customAccounts.map((a, i) =>
+            e('div', { key: 'custom_' + i, className: 'row' },
+              e('span', { className: 'name' }, a.name),
+              e('label', { className: 'balance-input', 'aria-label': w.openingBalance + ' ' + a.name },
+                e('span', { className: 'prefix' }, sym),
+                e('input', {
+                  type: 'text', inputMode: 'decimal',
+                  placeholder: '0.00',
+                  value: a.balance_str,
+                  onChange: (ev) => setCustomBalance(i, ev.target.value),
+                })
+              ),
+              e('button', {
+                type: 'button', className: 'remove',
+                'aria-label': 'Remove ' + a.name,
+                onClick: () => removeCustom(i),
+              }, '×')
+            )
+          ),
+        ),
+        e('div', { className: 'field', style: { marginTop: 20 } },
+          e('label', { htmlFor: 'wiz-custom' }, w.addCustom),
+          e('div', { style: { display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 } },
+            e('input', {
+              id: 'wiz-custom', type: 'text',
+              placeholder: w.customName, value: customDraft,
+              onChange: (ev) => setCustomDraft(ev.target.value),
+              onKeyDown: (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); addCustom(); } },
+            }),
+            e('button', { className: 'ghost', type: 'button', onClick: addCustom }, '+')
+          )
+        )
+      );
+    }
+
+    // step 4
+    const total_cats =
+      catsByBucket.needs.length + catsByBucket.wants.length + catsByBucket.savings.length;
+    return e(React.Fragment, null,
+      e('div', { className: 'step-label' }, w.step4Label),
+      e('h1', null, w.step4Title),
+      e('p', { className: 'subhead' }, w.step4Sub),
+      e('div', { style: { marginBottom: 16 } },
+        e('span', { className: 'muted' }, fmt(w.catCount, { n: total_cats }))
+      ),
+      e('div', { className: 'cat-preview' },
+        ['needs', 'wants', 'savings'].map(b =>
+          e('div', { key: b, className: 'bucket-col' },
+            e('h4', null,
+              e('span', { className: 'bucket-badge ' + b }, w.buckets[b])
+            ),
+            e('ul', null, catsByBucket[b].map(c => e('li', { key: c.name }, c.name)))
+          )
+        )
+      )
+    );
+  };
+
+  return e('div', { className: 'card elevated wiz', role: 'dialog', 'aria-labelledby': 'wiz-heading' },
+    e('div', { className: 'steps', 'aria-hidden': 'true' },
+      [1, 2, 3, 4].map(stepDot)
+    ),
+    bodyByStep(),
+    e('div', { className: 'actions' },
+      e('button', { className: 'skip', type: 'button', onClick: onSkipSession }, w.skip),
+      e('div', { className: 'right' },
+        step > 1 && e('button', { className: 'ghost', type: 'button', onClick: goBack }, w.back),
+        step < total
+          ? e('button', { type: 'button', onClick: goNext }, w.next)
+          : e('button', { type: 'button', onClick: finish }, w.finish)
+      )
+    )
+  );
+}
+
+function currencySymbol(code) {
+  return ({
+    MYR: 'RM', SGD: 'S$', USD: '$', AUD: 'A$', GBP: '£', EUR: '€',
+    IDR: 'Rp', THB: '฿', PHP: '₱', JPY: '¥',
+  })[code] ?? code;
+}
+
+/* =========================================================================
+ * QuickAdd — slide-down transaction row. Opens on `n`, Enter saves & reopens,
+ * Esc closes. Amount defaults to Expense; toggle flips to Income.
+ * ========================================================================= */
+function QuickAdd({ t, categories, accounts, onSave, onClose, currency }) {
+  const [type, setType] = useState('expense'); // 'expense' | 'income'
+  const [amount, setAmount] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [accountId, setAccountId] = useState(accounts[0]?.id ?? '');
+  const [merchant, setMerchant] = useState('');
+  const amountRef = React.useRef(null);
+
+  useEffect(() => {
+    // Autofocus amount on open; move focus back after save.
+    amountRef.current?.focus();
+  }, []);
+
+  // Category options: income only if type=income, else non-income buckets.
+  const catOptions = useMemo(() => {
+    return categories.filter(c => !c.archived);
+  }, [categories]);
+
+  const save = () => {
+    const sen = money.parse(amount);
+    if (sen == null || sen === 0) { amountRef.current?.focus(); return; }
+    const signed = type === 'income' ? Math.abs(sen) : -Math.abs(sen);
+    onSave({
+      date: new Date().toISOString().slice(0, 10),
+      account_id: accountId || null,
+      category_id: categoryId || null,
+      amount_sen: signed,
+      merchant: merchant.trim(),
+      notes: '',
+      tags: [],
+    });
+    // Reopen for next entry — clear amount + merchant, keep others.
+    setAmount(''); setMerchant('');
+    amountRef.current?.focus();
+  };
+
+  const onKey = (ev) => {
+    if (ev.key === 'Enter') { ev.preventDefault(); save(); }
+    else if (ev.key === 'Escape') { ev.preventDefault(); onClose(); }
+  };
+
+  const sym = currencySymbol(currency);
+  return e('div', { className: 'quickadd', onKeyDown: onKey, role: 'form', 'aria-label': t.txn.quickAdd },
+    e('div', { className: 'qa-row' },
+      e('div', { className: 'type-toggle', role: 'group', 'aria-label': t.txn.amount },
+        e('button', {
+          type: 'button',
+          className: 'expense' + (type === 'expense' ? ' active' : ''),
+          onClick: () => setType('expense'),
+        }, '−'),
+        e('button', {
+          type: 'button',
+          className: 'income' + (type === 'income' ? ' active' : ''),
+          onClick: () => setType('income'),
+        }, '+')
+      ),
+      e('input', {
+        ref: amountRef, className: 'amount',
+        type: 'text', inputMode: 'decimal',
+        placeholder: sym + ' 0.00',
+        value: amount, onChange: (ev) => setAmount(ev.target.value),
+        'aria-label': t.txn.amount,
+      }),
+      e('select', {
+        value: categoryId, onChange: (ev) => setCategoryId(ev.target.value),
+        'aria-label': t.txn.category,
+      },
+        e('option', { value: '' }, t.txn.chooseCategory),
+        catOptions.map(c => e('option', { key: c.id, value: c.id }, c.name))
+      ),
+      e('select', {
+        value: accountId, onChange: (ev) => setAccountId(ev.target.value),
+        'aria-label': t.txn.account,
+      },
+        e('option', { value: '' }, t.txn.chooseAccount),
+        accounts.filter(a => !a.archived).map(a => e('option', { key: a.id, value: a.id }, a.name))
+      ),
+      e('input', {
+        className: 'merchant',
+        type: 'text', placeholder: t.txn.merchant,
+        value: merchant, onChange: (ev) => setMerchant(ev.target.value),
+        'aria-label': t.txn.merchant,
+      }),
+      e('button', { className: 'save-btn', type: 'button', onClick: save }, t.txn.quickAdd),
+      e('button', { className: 'ghost close-btn', type: 'button', onClick: onClose, 'aria-label': t.txn.close }, '×'),
+    ),
+    e('div', { className: 'esc-hint' }, t.txn.escHint),
+  );
+}
+
+/* =========================================================================
+ * Transactions view — toolbar, ledger table, empty state, sample loader
+ * ========================================================================= */
+function Transactions({
+  t, currency, transactions, categories, accounts,
+  quickAddOpen, onOpenQuickAdd, onCloseQuickAdd,
+  onSave, onDelete, onLoadSample, toastPush, searchRef,
+  ledgerFilter,
+}) {
+  const [query, setQuery] = useState('');
+  const [accountFilter, setAccountFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo,   setDateTo]   = useState('');
+
+  // When dashboard chart clicks pass in a filter, seed the local state.
+  // `ts` (timestamp on the incoming filter) forces re-apply even if the values
+  // are the same as last click.
+  useEffect(() => {
+    if (!ledgerFilter) return;
+    setQuery(ledgerFilter.merchant ?? '');
+    setCategoryFilter(ledgerFilter.categoryId ?? '');
+    setDateFrom(ledgerFilter.range?.from ?? '');
+    setDateTo(ledgerFilter.range?.to ?? '');
+  }, [ledgerFilter?.ts]);
+
+  const catById = useMemo(() => Object.fromEntries(categories.map(c => [c.id, c])), [categories]);
+  const accById = useMemo(() => Object.fromEntries(accounts.map(a => [a.id, a])), [accounts]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return transactions
+      .filter(txn => !accountFilter || txn.account_id === accountFilter)
+      .filter(txn => !categoryFilter || txn.category_id === categoryFilter)
+      .filter(txn => !dateFrom || (txn.date && txn.date >= dateFrom))
+      .filter(txn => !dateTo   || (txn.date && txn.date <= dateTo))
+      .filter(txn => {
+        if (!q) return true;
+        const merch = (txn.merchant || '').toLowerCase();
+        const notes = (txn.notes || '').toLowerCase();
+        const tags = (txn.tags || []).join(' ').toLowerCase();
+        return merch.includes(q) || notes.includes(q) || tags.includes(q);
+      })
+      .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  }, [transactions, query, accountFilter, categoryFilter, dateFrom, dateTo]);
+
+  const del = (txn) => {
+    onDelete(txn.id);
+    toastPush({
+      message: t.txn.deletedToast,
+      undoLabel: t.txn.undo,
+      onUndo: () => onSave(txn, txn.id),
+      durationMs: 5000,
+    });
+  };
+
+  const isEmpty = transactions.length === 0;
+
+  return e(React.Fragment, null,
+    e('div', { className: 'view-header' },
+      e('h2', null, t.txn.title),
+      e('div', { className: 'actions' },
+        !quickAddOpen && e('button', { type: 'button', onClick: onOpenQuickAdd }, '+ ' + t.txn.quickAdd),
+      ),
+    ),
+
+    quickAddOpen && e(QuickAdd, {
+      t, categories, accounts, currency,
+      onSave: (data) => onSave(data),
+      onClose: onCloseQuickAdd,
+    }),
+
+    !isEmpty && e('div', { className: 'ledger-toolbar' },
+      e('input', {
+        type: 'search', placeholder: t.txn.searchPlaceholder,
+        value: query, onChange: (ev) => setQuery(ev.target.value),
+        ref: searchRef,
+        'aria-label': t.txn.searchPlaceholder,
+      }),
+      e('select', {
+        value: accountFilter, onChange: (ev) => setAccountFilter(ev.target.value),
+        'aria-label': t.txn.filterAll,
+      },
+        e('option', { value: '' }, t.txn.filterAll),
+        accounts.map(a => e('option', { key: a.id, value: a.id }, a.name))
+      ),
+      e('select', {
+        value: categoryFilter, onChange: (ev) => setCategoryFilter(ev.target.value),
+        'aria-label': t.txn.filterCatAll,
+      },
+        e('option', { value: '' }, t.txn.filterCatAll),
+        categories.map(c => e('option', { key: c.id, value: c.id }, c.name))
+      ),
+      e('div', { className: 'spacer' }),
+      (accountFilter || categoryFilter || query || dateFrom || dateTo) && e('button', {
+        className: 'ghost', type: 'button', style: { padding: '6px 10px' },
+        onClick: () => { setQuery(''); setAccountFilter(''); setCategoryFilter(''); setDateFrom(''); setDateTo(''); },
+      }, 'Clear filters'),
+      e('span', { className: 'muted' }, fmt(t.txn.count, { n: filtered.length })),
+    ),
+
+    isEmpty
+      ? e('div', { className: 'card elevated empty' },
+          e('svg', { className: 'illus', viewBox: '0 0 96 96', fill: 'none',
+                     stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round',
+                     'aria-hidden': 'true' },
+            e('path', { d: 'M14 30h68v52a4 4 0 0 1-4 4H18a4 4 0 0 1-4-4V30z' }),
+            e('path', { d: 'M14 30l6-14a4 4 0 0 1 3.6-2.3h48.8A4 4 0 0 1 76 16l6 14' }),
+            e('path', { d: 'M30 46h36M30 58h24' }),
+          ),
+          e('h3', null, t.txn.emptyTitle),
+          e('p', null, t.txn.emptyNote),
+          e('div', { className: 'empty-actions' },
+            e('button', { type: 'button', onClick: onOpenQuickAdd }, t.txn.addFirst),
+            e('button', { className: 'ghost', type: 'button', onClick: onLoadSample }, t.txn.addSample),
+          )
+        )
+      : e('div', { className: 'ledger-table' },
+          e('table', null,
+            e('thead', null,
+              e('tr', null,
+                e('th', null, t.txn.dateCol),
+                e('th', null, t.txn.merchantCol),
+                e('th', null, t.txn.categoryCol),
+                e('th', null, t.txn.accountCol),
+                e('th', { style: { textAlign: 'right' } }, t.txn.amountCol),
+                e('th', { 'aria-label': '' }),
+              )
+            ),
+            e('tbody', null,
+              filtered.map((txn) => {
+                const income = txn.amount_sen > 0;
+                return e('tr', { key: txn.id },
+                  e('td', null, formatDate(txn.date, profileLangFromDoc())),
+                  e('td', null, txn.merchant || '—',
+                    (txn.tags || []).includes('sample') && e('span', {
+                      className: 'sample-tag', style: { marginLeft: 8 },
+                    }, t.txn.sampleBadge),
+                  ),
+                  e('td', null, catById[txn.category_id]?.name ?? '—'),
+                  e('td', null, accById[txn.account_id]?.name ?? '—'),
+                  e('td', { className: 'amt ' + (income ? 'income' : 'expense') },
+                    (income ? '+' : '') + money.format(txn.amount_sen, { currency, showSymbol: true })
+                  ),
+                  e('td', null,
+                    e('button', {
+                      className: 'del-btn', type: 'button',
+                      'aria-label': 'Delete transaction',
+                      onClick: () => del(txn),
+                    }, '×')
+                  )
+                );
+              })
+            )
+          )
+        )
+  );
+}
+
+// DD/MM/YYYY per the brief (both languages).
+function formatDate(iso /* YYYY-MM-DD */) {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+// Placeholder — the language isn't needed for date formatting per the brief,
+// but keeping the seam in case we localize weekday names later.
+function profileLangFromDoc() { return document.documentElement.lang || 'en'; }
+
+/* =========================================================================
+ * Settings — three panels: Profile & budget, Categories, Accounts
+ * ========================================================================= */
+function Settings({ t, profile, updateProfile, categoriesCol, accountsCol }) {
+  return e('div', { className: 'settings-stack' },
+    e('h2', null, t.settings.title),
+    e(ProfilePanel, { t, profile, updateProfile }),
+    e(CategoriesPanel, { t, col: categoriesCol }),
+    e(AccountsPanel, { t, col: accountsCol, currency: profile.currency }),
+  );
+}
+
+/* ---------- Profile & budget ---------- */
+function ProfilePanel({ t, profile, updateProfile }) {
+  const p = t.settings.profile;
+  const [incomeStr, setIncomeStr] = useState(
+    profile.income_sen ? (profile.income_sen / 100).toFixed(2) : ''
+  );
+  // Split as three strings while editing, validated on blur / Save.
+  const [needsStr,   setNeedsStr]   = useState(String(profile.split.needs));
+  const [wantsStr,   setWantsStr]   = useState(String(profile.split.wants));
+  const [savingsStr, setSavingsStr] = useState(String(profile.split.savings));
+
+  // Keep local state in sync if profile changes elsewhere.
+  useEffect(() => {
+    setNeedsStr(String(profile.split.needs));
+    setWantsStr(String(profile.split.wants));
+    setSavingsStr(String(profile.split.savings));
+  }, [profile.split.needs, profile.split.wants, profile.split.savings]);
+
+  const needsN   = Number(needsStr);
+  const wantsN   = Number(wantsStr);
+  const savingsN = Number(savingsStr);
+  const parts = [needsN, wantsN, savingsN];
+  const anyNaN = parts.some(n => !Number.isFinite(n) || n < 0);
+  const total = anyNaN ? NaN : needsN + wantsN + savingsN;
+  const splitValid = !anyNaN && total === 100;
+
+  const commitIncome = () => {
+    const sen = money.parse(incomeStr);
+    if (sen != null && sen >= 0 && sen !== profile.income_sen) {
+      updateProfile({ income_sen: sen });
+    }
+    // Reformat the displayed value.
+    if (sen != null) setIncomeStr((sen / 100).toFixed(2));
+  };
+  const commitSplit = () => {
+    if (!splitValid) return;
+    updateProfile({ split: { needs: needsN, wants: wantsN, savings: savingsN } });
+  };
+
+  const sym = currencySymbol(profile.currency);
+
+  return e('div', { className: 'card elevated settings-section' },
+    e('h3', null, p.title),
+    e('p', { className: 'section-sub' }, p.sub),
+
+    // Income
+    e('div', { className: 'setting-row' },
+      e('div', { className: 'label-col' },
+        e('div', { className: 'name' }, p.income),
+        e('div', { className: 'hint' }, p.incomeHint),
+      ),
+      e('div', { className: 'money-input', style: { minWidth: 220 } },
+        e('span', { className: 'prefix' }, sym),
+        e('input', {
+          type: 'text', inputMode: 'decimal',
+          value: incomeStr,
+          onChange: (ev) => setIncomeStr(ev.target.value),
+          onBlur: commitIncome,
+          onKeyDown: (ev) => { if (ev.key === 'Enter') { ev.currentTarget.blur(); } },
+          'aria-label': p.income,
+        }),
+      ),
+    ),
+
+    // Split — three inputs
+    e('div', { className: 'setting-row', style: { display: 'block' } },
+      e('div', { className: 'label-col' },
+        e('div', { className: 'name' }, p.split),
+        e('div', { className: 'hint' }, p.splitHint),
+      ),
+      e('div', { className: 'split-grid', style: { marginTop: 12 } },
+        e(SplitInput, { label: p.needs,   value: needsStr,   onChange: setNeedsStr }),
+        e(SplitInput, { label: p.wants,   value: wantsStr,   onChange: setWantsStr }),
+        e(SplitInput, { label: p.savings, value: savingsStr, onChange: setSavingsStr }),
+      ),
+      e('div', { className: 'split-status' },
+        splitValid
+          ? e('span', { className: 'ok' }, '✓ ' + p.splitOk)
+          : e('span', { className: total > 100 ? 'over' : 'off' },
+              fmt(p.splitOff, { n: anyNaN ? '?' : total })
+            ),
+        e('button', {
+          type: 'button', style: { marginLeft: 'auto' },
+          disabled: !splitValid, onClick: commitSplit,
+        }, 'Save split'),
+      ),
+    ),
+
+    // Currency
+    e('div', { className: 'setting-row' },
+      e('div', { className: 'label-col' },
+        e('div', { className: 'name' }, p.currency),
+      ),
+      e('select', {
+        value: profile.currency,
+        onChange: (ev) => updateProfile({ currency: ev.target.value }),
+      }, CURRENCIES.map(c => e('option', { key: c.code, value: c.code }, c.label))),
+    ),
+
+    // Language
+    e('div', { className: 'setting-row' },
+      e('div', { className: 'label-col' },
+        e('div', { className: 'name' }, p.language),
+      ),
+      e('div', { className: 'seg-toggle' },
+        ['en', 'ms'].map(k =>
+          e('button', {
+            key: k, type: 'button',
+            className: profile.language === k ? 'active' : '',
+            onClick: () => updateProfile({ language: k }),
+          }, k === 'en' ? 'English' : 'Bahasa Malaysia')
+        )
+      ),
+    ),
+
+    // Theme
+    e('div', { className: 'setting-row' },
+      e('div', { className: 'label-col' },
+        e('div', { className: 'name' }, p.theme),
+      ),
+      e('div', { className: 'seg-toggle' },
+        [
+          ['system', p.themeSystem],
+          ['light',  p.themeLight],
+          ['dark',   p.themeDark],
+        ].map(([k, label]) =>
+          e('button', {
+            key: k, type: 'button',
+            className: profile.theme === k ? 'active' : '',
+            onClick: () => updateProfile({ theme: k }),
+          }, label)
+        )
+      ),
+    ),
+  );
+}
+
+function SplitInput({ label, value, onChange }) {
+  return e('label', { className: 'field', style: { marginBottom: 0 } },
+    e('span', { style: { fontWeight: 600, fontSize: 13 } }, label),
+    e('input', {
+      type: 'number', inputMode: 'numeric',
+      min: 0, max: 100, step: 1,
+      value: value,
+      onChange: (ev) => onChange(ev.target.value),
+    }),
+  );
+}
+
+/* ---------- Categories manager ---------- */
+function CategoriesPanel({ t, col }) {
+  const p = t.settings.cats;
+  const [showArchived, setShowArchived] = useState(false);
+  const [draftName, setDraftName] = useState('');
+  const [draftBucket, setDraftBucket] = useState('needs');
+
+  const grouped = useMemo(() => {
+    const buckets = { needs: [], wants: [], savings: [] };
+    for (const c of col.rows) {
+      if (c.archived && !showArchived) continue;
+      if (!buckets[c.bucket]) continue;
+      buckets[c.bucket].push(c);
+    }
+    for (const k of Object.keys(buckets)) {
+      buckets[k].sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return buckets;
+  }, [col.rows, showArchived]);
+
+  const addCategory = () => {
+    const name = draftName.trim();
+    if (!name) return;
+    col.add({ name, bucket: draftBucket, archived: false });
+    setDraftName('');
+  };
+
+  const isEmpty = col.rows.length === 0;
+
+  return e('div', { className: 'card elevated settings-section' },
+    e('h3', null, p.title),
+    e('p', { className: 'section-sub' }, p.sub),
+
+    e('div', { style: { display: 'flex', justifyContent: 'flex-end', marginBottom: 8 } },
+      e('label', { style: { display: 'inline-flex', gap: 8, alignItems: 'center', color: 'var(--muted)', fontSize: 13 } },
+        e('input', {
+          type: 'checkbox', checked: showArchived,
+          onChange: (ev) => setShowArchived(ev.target.checked),
+        }),
+        p.showArchived,
+      ),
+    ),
+
+    isEmpty
+      ? e('p', { className: 'muted' }, p.empty)
+      : e('div', null,
+          ['needs', 'wants', 'savings'].map(b =>
+            grouped[b].length === 0 ? null : e(React.Fragment, { key: b },
+              e('div', { className: 'mgr-bucket-header' },
+                e('span', { className: 'bucket-badge ' + b }, p.buckets[b]),
+                e('span', { className: 'count' }, grouped[b].length),
+              ),
+              e('div', { className: 'mgr-list' },
+                grouped[b].map(c => e(CategoryRow, { key: c.id, cat: c, col, t: p })),
+              ),
+            )
+          ),
+        ),
+
+    e('div', { className: 'add-row' },
+      e('input', {
+        type: 'text', placeholder: p.addPlaceholder,
+        value: draftName, onChange: (ev) => setDraftName(ev.target.value),
+        onKeyDown: (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); addCategory(); } },
+      }),
+      e('select', {
+        value: draftBucket, onChange: (ev) => setDraftBucket(ev.target.value),
+      },
+        e('option', { value: 'needs' },   p.buckets.needs),
+        e('option', { value: 'wants' },   p.buckets.wants),
+        e('option', { value: 'savings' }, p.buckets.savings),
+      ),
+      e('button', { type: 'button', onClick: addCategory, disabled: !draftName.trim() }, p.add),
+    ),
+  );
+}
+
+function CategoryRow({ cat, col, t }) {
+  const [name, setName] = useState(cat.name);
+  useEffect(() => setName(cat.name), [cat.name]);
+  const commitName = () => {
+    const trimmed = name.trim();
+    if (!trimmed || trimmed === cat.name) { setName(cat.name); return; }
+    col.update(cat.id, { name: trimmed });
+  };
+  return e('div', { className: 'mgr-row' + (cat.archived ? ' archived' : '') },
+    e('input', {
+      type: 'text', value: name,
+      onChange: (ev) => setName(ev.target.value),
+      onBlur: commitName,
+      onKeyDown: (ev) => { if (ev.key === 'Enter') ev.currentTarget.blur(); },
+      'aria-label': 'Category name',
+    }),
+    e('select', {
+      className: 'bucket-pick', value: cat.bucket,
+      onChange: (ev) => col.update(cat.id, { bucket: ev.target.value }),
+      'aria-label': 'Bucket',
+    },
+      e('option', { value: 'needs' },   t.buckets.needs),
+      e('option', { value: 'wants' },   t.buckets.wants),
+      e('option', { value: 'savings' }, t.buckets.savings),
+    ),
+    e('button', {
+      type: 'button', className: 'icon-mini',
+      title: cat.archived ? t.unarchive : t.archive,
+      'aria-label': cat.archived ? t.unarchive : t.archive,
+      onClick: () => col.update(cat.id, { archived: !cat.archived }),
+    },
+      cat.archived
+        // Restore icon (rotate-ccw)
+        ? e('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+                     strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' },
+            e('path', { d: 'M3 12a9 9 0 1 0 3-6.7' }),
+            e('polyline', { points: '3 4 3 10 9 10' }),
+          )
+        // Archive icon
+        : e('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+                     strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' },
+            e('rect', { x: 3, y: 4, width: 18, height: 4, rx: 1 }),
+            e('path', { d: 'M5 8v11a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8' }),
+            e('line', { x1: 10, y1: 13, x2: 14, y2: 13 }),
+          )
+    ),
+    // Spacer for grid alignment (4th column)
+    e('span', null),
+  );
+}
+
+/* ---------- Accounts manager ---------- */
+function AccountsPanel({ t, col, currency }) {
+  const p = t.settings.accts;
+  const [showArchived, setShowArchived] = useState(false);
+  const [draftName, setDraftName] = useState('');
+  const [draftType, setDraftType] = useState('current');
+  const [draftBalance, setDraftBalance] = useState('');
+
+  const grouped = useMemo(() => {
+    const groups = {};
+    for (const a of col.rows) {
+      if (a.archived && !showArchived) continue;
+      const key = a.type || 'cash';
+      (groups[key] ??= []).push(a);
+    }
+    for (const k of Object.keys(groups)) {
+      groups[k].sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return groups;
+  }, [col.rows, showArchived]);
+
+  const typeOrder = ['current', 'savings', 'credit', 'ewallet', 'cash', 'investment'];
+
+  const addAccount = () => {
+    const name = draftName.trim();
+    if (!name) return;
+    col.add({
+      name,
+      type: draftType,
+      institution: '',
+      opening_balance_sen: money.parse(draftBalance) ?? 0,
+      currency,
+      archived: false,
+    });
+    setDraftName(''); setDraftBalance('');
+  };
+
+  const isEmpty = col.rows.length === 0;
+
+  return e('div', { className: 'card elevated settings-section' },
+    e('h3', null, p.title),
+    e('p', { className: 'section-sub' }, p.sub),
+
+    e('div', { style: { display: 'flex', justifyContent: 'flex-end', marginBottom: 8 } },
+      e('label', { style: { display: 'inline-flex', gap: 8, alignItems: 'center', color: 'var(--muted)', fontSize: 13 } },
+        e('input', {
+          type: 'checkbox', checked: showArchived,
+          onChange: (ev) => setShowArchived(ev.target.checked),
+        }),
+        p.showArchived,
+      ),
+    ),
+
+    isEmpty
+      ? e('p', { className: 'muted' }, p.empty)
+      : e('div', null,
+          typeOrder.filter(k => grouped[k]?.length).map(type =>
+            e(React.Fragment, { key: type },
+              e('div', { className: 'mgr-bucket-header' },
+                e('h4', null, p.types[type] ?? type),
+                e('span', { className: 'count' }, grouped[type].length),
+              ),
+              e('div', { className: 'mgr-list' },
+                grouped[type].map(a => e(AccountRow, {
+                  key: a.id, acct: a, col, t: p, currency,
+                })),
+              ),
+            )
+          ),
+        ),
+
+    e('div', { className: 'add-row' },
+      e('input', {
+        type: 'text', placeholder: p.addPlaceholder,
+        value: draftName, onChange: (ev) => setDraftName(ev.target.value),
+        onKeyDown: (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); addAccount(); } },
+      }),
+      e('select', {
+        value: draftType, onChange: (ev) => setDraftType(ev.target.value),
+        'aria-label': 'Type',
+      },
+        typeOrder.map(k => e('option', { key: k, value: k }, p.types[k])),
+      ),
+      e('button', { type: 'button', onClick: addAccount, disabled: !draftName.trim() }, p.add),
+    ),
+  );
+}
+
+function AccountRow({ acct, col, t, currency }) {
+  const [name, setName] = useState(acct.name);
+  const [bal, setBal] = useState(
+    Number.isFinite(acct.opening_balance_sen) ? (acct.opening_balance_sen / 100).toFixed(2) : '0.00'
+  );
+  useEffect(() => setName(acct.name), [acct.name]);
+  useEffect(() => {
+    setBal(((acct.opening_balance_sen ?? 0) / 100).toFixed(2));
+  }, [acct.opening_balance_sen]);
+
+  const commitName = () => {
+    const trimmed = name.trim();
+    if (!trimmed || trimmed === acct.name) { setName(acct.name); return; }
+    col.update(acct.id, { name: trimmed });
+  };
+  const commitBal = () => {
+    const sen = money.parse(bal);
+    if (sen == null) { setBal(((acct.opening_balance_sen ?? 0) / 100).toFixed(2)); return; }
+    if (sen !== acct.opening_balance_sen) col.update(acct.id, { opening_balance_sen: sen });
+    setBal((sen / 100).toFixed(2));
+  };
+
+  const sym = currencySymbol(currency);
+  return e('div', { className: 'mgr-row' + (acct.archived ? ' archived' : '') },
+    e('input', {
+      type: 'text', value: name,
+      onChange: (ev) => setName(ev.target.value),
+      onBlur: commitName,
+      onKeyDown: (ev) => { if (ev.key === 'Enter') ev.currentTarget.blur(); },
+      'aria-label': 'Account name',
+    }),
+    e('select', {
+      className: 'type-pick', value: acct.type || 'cash',
+      onChange: (ev) => col.update(acct.id, { type: ev.target.value }),
+      'aria-label': 'Type',
+    },
+      ['current', 'savings', 'credit', 'ewallet', 'cash', 'investment'].map(k =>
+        e('option', { key: k, value: k }, t.types[k])
+      ),
+    ),
+    e('span', { className: 'balance-cell', title: t.openingBalance },
+      e('span', { className: 'prefix' }, sym),
+      e('input', {
+        type: 'text', inputMode: 'decimal',
+        value: bal,
+        onChange: (ev) => setBal(ev.target.value),
+        onBlur: commitBal,
+        onKeyDown: (ev) => { if (ev.key === 'Enter') ev.currentTarget.blur(); },
+        'aria-label': t.openingBalance,
+      }),
+    ),
+    e('button', {
+      type: 'button', className: 'icon-mini',
+      title: acct.archived ? t.unarchive : t.archive,
+      'aria-label': acct.archived ? t.unarchive : t.archive,
+      onClick: () => col.update(acct.id, { archived: !acct.archived }),
+    },
+      acct.archived
+        ? e('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+                     strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' },
+            e('path', { d: 'M3 12a9 9 0 1 0 3-6.7' }),
+            e('polyline', { points: '3 4 3 10 9 10' }),
+          )
+        : e('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+                     strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' },
+            e('rect', { x: 3, y: 4, width: 18, height: 4, rx: 1 }),
+            e('path', { d: 'M5 8v11a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8' }),
+            e('line', { x1: 10, y1: 13, x2: 14, y2: 13 }),
+          )
+    ),
+  );
+}
+
+function Placeholder({ title, note }) {
+  return e('div', { className: 'card elevated' },
+    e('h2', null, title),
+    e('p', { className: 'muted' }, note)
+  );
+}
+
+/* ---------- /#debug/math route ---------- */
+function DebugMath() {
+  const results = useMemo(() => runMathAssertions(), []);
+  const passed = results.filter(r => r.pass).length;
+  return e('div', { className: 'card elevated debug-math' },
+    e('h2', null, `Math regression — ${passed}/${results.length} passing`),
+    e('ol', null, results.map((r, i) =>
+      e('li', { key: i, className: r.pass ? 'pass' : 'fail' },
+        `${r.pass ? '✔' : '✘'} ${r.name}${r.pass ? '' : ` — got ${JSON.stringify(r.got)}, want ${JSON.stringify(r.want)}`}`
+      )
+    ))
+  );
+}
+
+function runMathAssertions() {
+  const R = [];
+  const eq = (name, got, want) => R.push({ name, got, want, pass: JSON.stringify(got) === JSON.stringify(want) });
+
+  // format
+  eq('format 0 sen',           money.format(0),            'RM 0.00');
+  eq('format 100 sen',         money.format(100),          'RM 1.00');
+  eq('format 123456 sen',      money.format(123456),       'RM 1,234.56');
+  eq('format -50 sen',         money.format(-50),          '-RM 0.50');
+  eq('format 100000000',       money.format(100000000),    'RM 1,000,000.00');
+
+  // parse
+  eq('parse RM 1,234.56',      money.parse('RM 1,234.56'), 123456);
+  eq('parse 1234.56',          money.parse('1234.56'),     123456);
+  eq('parse empty → null',     money.parse(''),            null);
+  eq('parse garbage → null',   money.parse('abc'),         null);
+
+  // banker's rounding
+  eq('bankers 0.5 → 0',        money.bankersRound(0.5),    0);
+  eq('bankers 1.5 → 2',        money.bankersRound(1.5),    2);
+  eq('bankers 2.5 → 2',        money.bankersRound(2.5),    2);
+  eq('bankers 3.5 → 4',        money.bankersRound(3.5),    4);
+  eq('bankers 2.4 → 2',        money.bankersRound(2.4),    2);
+  eq('bankers 2.6 → 3',        money.bankersRound(2.6),    3);
+
+  // add / subtract
+  eq('add 33+33+33=99',        money.add(33, 33, 33),      99);
+  eq('subtract',               money.subtract(100, 25),    75);
+
+  // percent (basis points)
+  eq('10% of 10000 sen',       money.percent(10000, 1000), 1000);
+  eq('12.34% of 100000',       money.percent(100000, 1234), 1234);
+
+  // splitExact — sum invariant
+  const s = money.splitExact(100000, [50, 30, 20]);
+  eq('split 1000RM 50/30/20 sums exactly', s.reduce((a,b)=>a+b,0), 100000);
+  eq('split 1000RM 50/30/20 shape',        s.length,               3);
+  const s2 = money.splitExact(100003, [50, 30, 20]); // odd income → remainder into largest
+  eq('split 1000.03 sum invariant',        s2.reduce((a,b)=>a+b,0), 100003);
+  eq('split 1000.03 remainder → needs',    s2[0] > Math.floor(100003 * 50 / 100), true);
+
+  // custom split (60/20/20)
+  const s3 = money.splitExact(500099, [60, 20, 20]);
+  eq('split 5000.99 60/20/20 sums exactly', s3.reduce((a,b)=>a+b,0), 500099);
+
+  // Debt monthly payment formula (RM 10,000 at 18% APR over 12 months)
+  // M = P r (1+r)^n / ((1+r)^n − 1); r = 0.18/12 = 0.015; n = 12
+  // Expected ≈ RM 916.80  → 91680 sen (allow ±2 sen)
+  const monthly_sen = amortMonthly_sen(1000000, 1800 /* apr_bps */, 12);
+  eq('amort 10k@18%/12mo ≈ 916.80', Math.abs(monthly_sen - 91680) <= 2, true);
+
+  // Amortization total = principal + interest, all months
+  const sched = amortSchedule_sen(1000000, 1800, 12);
+  const paid = sched.reduce((a, r) => a + r.payment_sen, 0);
+  eq('amort 12mo total payments > principal', paid > 1000000, true);
+  eq('amort 12mo final balance ≈ 0',          Math.abs(sched[sched.length - 1].balance_after_sen) <= 1, true);
+
+  // Sinking fund required contribution: 5000 RM in 10 months → 500 RM/mo exact
+  eq('sinking 5000/10 = 500',      sinkingRequiredMonthly_sen(500000, 10), 50000);
+  // 5001 RM in 10 → ceil to 500.10
+  eq('sinking 5001/10 ceils',      sinkingRequiredMonthly_sen(500100, 10), 50010);
+
+  return R;
+}
+
+/* =========================================================================
+ * Debt math — monthly payment + amortization schedule (integer sen)
+ * ========================================================================= */
+function amortMonthly_sen(principal_sen, apr_bps, months) {
+  const r = (apr_bps / 10000) / 12; // periodic rate
+  if (r === 0) return money.bankersRound(principal_sen / months);
+  const factor = Math.pow(1 + r, months);
+  const M = principal_sen * r * factor / (factor - 1);
+  return money.bankersRound(M);
+}
+
+function amortSchedule_sen(principal_sen, apr_bps, months, extra_sen = 0) {
+  const r = (apr_bps / 10000) / 12;
+  const M = amortMonthly_sen(principal_sen, apr_bps, months) + extra_sen;
+  const rows = [];
+  let bal = principal_sen;
+  for (let i = 1; i <= months && bal > 0; i++) {
+    const interest_sen = money.bankersRound(bal * r);
+    let principalPaid = M - interest_sen;
+    if (principalPaid > bal) principalPaid = bal;
+    const payment = principalPaid + interest_sen;
+    bal -= principalPaid;
+    rows.push({ month: i, payment_sen: payment, interest_sen, principal_sen: principalPaid, balance_after_sen: bal });
+  }
+  return rows;
+}
+
+function sinkingRequiredMonthly_sen(remaining_sen, months_remaining) {
+  if (months_remaining <= 0) return remaining_sen;
+  return Math.ceil(remaining_sen / months_remaining);
+}
+
+/* =========================================================================
+ * Root component
+ * ========================================================================= */
+function App() {
+  const [profile, updateProfile] = useProfile();
+  useTheme(profile);
+  const [route, setRoute] = useRoute();
+  const t = STRINGS[profile.language] ?? STRINGS.en;
+
+  // Onboarding gate — declared early so `nav` can dismiss it on any sidebar click.
+  const [skippedThisSession, setSkippedThisSession] = useState(false);
+
+  const nav = useCallback((k) => {
+    // If the wizard is still up, any nav click means "I want to explore" —
+    // dismiss the wizard for this session so the destination is actually visible.
+    if (!profile.onboarding_done) setSkippedThisSession(true);
+    setRoute(k);
+  }, [profile.onboarding_done, setRoute]);
+
+  // Collections
+  const categoriesCol   = useCollection('categories');
+  const accountsCol     = useCollection('accounts');
+  const transactionsCol = useCollection('transactions');
+  const fundsCol        = useCollection('sinking_funds');
+  const debtsCol        = useCollection('debts');
+
+  // Toasts (undo, etc.)
+  const { toasts, push: toastPush, dismiss: toastDismiss } = useToasts();
+
+  // Wizard is visible until finished OR skipped for this session.
+  // Also only shown on the dashboard route so users can freely explore other tabs.
+  const showWizard =
+    !profile.onboarding_done && !skippedThisSession &&
+    (route === 'dashboard' || route === '') &&
+    route !== 'debug/math';
+
+  // Sidebar visibility (session-scoped for now).
+  const [sidebarHiddenUser, setSidebarHiddenUser] = useState(false);
+  // Hidden if the user collapsed it, OR while the wizard is up.
+  const sidebarHidden = sidebarHiddenUser || showWizard;
+  const toggleSidebar = () => setSidebarHiddenUser(v => !v);
+
+  // Ledger filter set by dashboard chart clicks — Transactions seeds its own
+  // filter state from this when the value bumps.
+  const [ledgerFilter, setLedgerFilter] = useState(null);
+  const applyLedgerFilter = useCallback((flt) => {
+    setLedgerFilter({ ...flt, ts: Date.now() });
+    nav('transactions');
+  }, [nav]);
+
+  // Quick-add is a global overlay so `n` (or the topbar +) can open it from anywhere.
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const openQuickAdd = useCallback(() => {
+    // If onboarding is still up, treat the click as "I want to start using it now"
+    // and dismiss the wizard for this session so the quick-add row is actually visible.
+    if (!profile.onboarding_done) setSkippedThisSession(true);
+    if (route !== 'transactions') setRoute('transactions');
+    setQuickAddOpen(true);
+  }, [route, profile.onboarding_done, setRoute]);
+  const closeQuickAdd = useCallback(() => setQuickAddOpen(false), []);
+
+  // Search field ref for `/` shortcut
+  const searchRef = React.useRef(null);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    let pending = null, pendingUntil = 0;
+    const handler = (ev) => {
+      const el = ev.target;
+      const inField = el && /INPUT|TEXTAREA|SELECT/.test(el.tagName);
+      const now = Date.now();
+      // `g` chord
+      if (pending === 'g' && now < pendingUntil && !inField) {
+        pending = null;
+        const map = { d: 'dashboard', t: 'transactions', f: 'funds', x: 'debts', s: 'settings' };
+        if (map[ev.key]) { nav(map[ev.key]); ev.preventDefault(); }
+        return;
+      }
+      if (inField) return; // don't hijack typing
+      if (ev.key === 'g') { pending = 'g'; pendingUntil = now + 800; return; }
+      if (ev.key === 'n') { ev.preventDefault(); openQuickAdd(); }
+      else if (ev.key === '/') {
+        ev.preventDefault();
+        if (route !== 'transactions') setRoute('transactions');
+        setTimeout(() => searchRef.current?.focus(), 30);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [openQuickAdd, route, nav, setRoute]);
+
+  // Save handler used by QuickAdd + undo. If `id` is supplied, restore the row.
+  const saveTxn = async (data, restoreId) => {
+    if (restoreId) {
+      await transactionsCol.restore({ id: restoreId, ...data });
+    } else {
+      await transactionsCol.add(data);
+    }
+  };
+  const deleteTxn = async (id) => transactionsCol.remove(id);
+
+  // Load sample month using seeded categories + accounts as name→id maps.
+  const loadSampleMonth = async () => {
+    const catsByName = Object.fromEntries(categoriesCol.rows.map(c => [c.name, c]));
+    const accsByName = Object.fromEntries(accountsCol.rows.map(a => [a.name, a]));
+    const rows = makeSampleMonth(catsByName, accsByName);
+    for (const r of rows) await transactionsCol.add(r);
+  };
+
+  const view = (() => {
+    if (showWizard) {
+      return e(OnboardingWizard, {
+        t, profile, updateProfile,
+        categoriesCol, accountsCol,
+        onDone: () => { nav('dashboard'); },
+        onSkipSession: () => setSkippedThisSession(true),
+      });
+    }
+    if (route === 'debug/math') return e(DebugMath);
+    if (route === 'transactions') return e(Transactions, {
+      t, currency: profile.currency,
+      transactions: transactionsCol.rows,
+      categories: categoriesCol.rows,
+      accounts: accountsCol.rows,
+      quickAddOpen, onOpenQuickAdd: openQuickAdd, onCloseQuickAdd: closeQuickAdd,
+      onSave: saveTxn, onDelete: deleteTxn,
+      onLoadSample: loadSampleMonth,
+      toastPush, searchRef,
+      ledgerFilter,
+    });
+    if (route === 'funds')    return e(Funds, {
+      t, currency: profile.currency,
+      fundsCol, categories: categoriesCol.rows,
+      transactions: transactionsCol.rows,
+      toastPush,
+    });
+    if (route === 'debts')    return e(Debts, {
+      t, currency: profile.currency,
+      profile, updateProfile,
+      debtsCol, toastPush,
+    });
+    if (route === 'settings') return e(Settings, {
+      t, profile, updateProfile,
+      categoriesCol, accountsCol,
+    });
+    return e(Dashboard, {
+      t, profile, onNav: nav,
+      transactions: transactionsCol.rows,
+      categories: categoriesCol.rows,
+      funds: fundsCol.rows,
+      onFilterLedger: applyLedgerFilter,
+    });
+  })();
+
+  // Portal the toasts into the fixed-position region declared in the HTML shell.
+  const toastRegion = document.getElementById('toast-region');
+  const toastNode = toastRegion
+    ? ReactDOM.createPortal(e(ToastRegion, { toasts, dismiss: toastDismiss }), toastRegion)
+    : null;
+
+  return e(React.Fragment, null,
+    e('div', { className: 'shell' + (sidebarHidden ? ' no-sidebar' : '') },
+      !sidebarHidden && e(Sidebar, { t, route, onNav: nav, onHide: toggleSidebar }),
+      e('main', { className: 'main' },
+        e('div', { className: 'main-inner' },
+          e(TopBar, {
+            t, lang: profile.language,
+            onLang: (v) => updateProfile({ language: v }),
+            onQuickAdd: openQuickAdd,
+            showQuickAdd: !showWizard,
+            onToggleSidebar: toggleSidebar,
+            sidebarHidden,
+            // The manual toggle only makes sense once onboarding lets the sidebar exist.
+            showSidebarToggle: !showWizard,
+          }),
+          view,
+        )
+      ),
+      // Bottom tab bar is CSS-hidden above 720px, so we still render it —
+      // but only when the wizard isn't up.
+      !showWizard && e(BottomNav, { t, route, onNav: nav }),
+    ),
+    toastNode,
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+
+/* Keyboard shortcuts (n, /, g-chord) are wired inside App via useEffect. */
+</script>

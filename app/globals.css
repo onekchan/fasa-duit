@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =========================================================================
+ * FASA Duit — design tokens
+ * Warm, calm, tactile palette. Do NOT hard-code hex in components; reference
+ * these tokens via Tailwind (bg-brand, text-ink, etc.) or `var(--brand)`.
+ *
+ * Dark tokens are redefined in BOTH `@media (prefers-color-scheme: dark)` and
+ * `:root[data-theme="dark"]` so the manual toggle wins either way. Never let
+ * a token's ONLY definition live inside a media/data-theme block — always
+ * declare on bare :root first.
+ * ========================================================================= */
+:root {
+  --bg: #fbf6ee;
+  --surface: #ffffff;
+  --card: #f5ebda;
+  --ink: #3e2a1f;
+  --muted: #7a6b5f;
+  --brand: #c8553d;
+  --accent: #6b8e5a;
+  --warning: #d98e3a;
+  --danger: #a03e2f;
+  --divider: #e8dcc7;
+
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1f1712;
+    --surface: #241b15;
+    --card: #2a211b;
+    --ink: #f5ebda;
+    --muted: #b8a897;
+    --brand: #e07a64;
+    --accent: #8fb37a;
+    --warning: #e8a85a;
+    --danger: #c86454;
+    --divider: #3a2e24;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1f1712;
+  --surface: #241b15;
+  --card: #2a211b;
+  --ink: #f5ebda;
+  --muted: #b8a897;
+  --brand: #e07a64;
+  --accent: #8fb37a;
+  --warning: #e8a85a;
+  --danger: #c86454;
+  --divider: #3a2e24;
+  color-scheme: dark;
+}
+
+/* Base */
+html,
+body {
+  overflow-x: clip; /* NOT `hidden` — clip preserves position: sticky descendants */
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+/* Visible focus ring on the warm palette */
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}

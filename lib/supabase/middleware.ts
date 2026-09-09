@@ -45,7 +45,13 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const isAuthRoute = ["/login", "/signup", "/reset"].some((p) => path.startsWith(p));
-  const isPublicRoute = path === "/" || path.startsWith("/auth") || isAuthRoute;
+  // API routes handle their own auth (cron uses a bearer secret, /auth/callback
+  // exchanges an OAuth code). Never redirect them to /login — that turns a
+  // legitimate 200/401 JSON response into an HTML sign-in page and breaks
+  // both curl/Vercel Cron and the OAuth callback flow.
+  const isApiRoute = path.startsWith("/api/");
+  const isPublicRoute =
+    path === "/" || path.startsWith("/auth") || isApiRoute || isAuthRoute;
 
   // Authenticated user visiting an auth page? Send them into the app.
   if (user && isAuthRoute) {

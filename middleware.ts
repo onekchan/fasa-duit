@@ -14,6 +14,9 @@ export const config = {
      * - favicon.ico (favicon file)
      * - images / fonts served from public
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)",
+    // `api/` is excluded so route handlers (including the cron endpoint)
+    // aren't caught by the session-refresh + login-redirect logic — they own
+    // their own auth (bearer secret, OAuth code exchange, etc.).
+    "/((?!api/|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2?)$).*)",
   ],
 };

@@ -380,77 +380,150 @@ export function TransactionsClient({
           </div>
         </Card>
       ) : (
-        <div className="overflow-x-auto rounded-card border border-divider bg-surface">
-          <table className="w-full border-collapse text-sm">
-            <thead className="bg-card">
-              <tr className="text-left text-xs font-semibold uppercase tracking-wider text-muted">
-                <th className="px-4 py-3">{t.dateCol}</th>
-                <th className="px-4 py-3">{t.merchantCol}</th>
-                <th className="px-4 py-3">{t.categoryCol}</th>
-                <th className="px-4 py-3">{t.accountCol}</th>
-                <th className="px-4 py-3 text-right">{t.amountCol}</th>
-                <th className="w-8 px-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((r) => {
-                const income = r.amount_sen > 0;
-                const cat = r.category_id ? catById[r.category_id] : null;
-                const acct = r.account_id ? acctById[r.account_id] : null;
-                return (
-                  <tr key={r.id} className="border-t border-divider hover:bg-card">
-                    <td className="px-4 py-3">{formatDate(r.date)}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <span>{r.merchant || "—"}</span>
-                        {(r.tags ?? []).includes("sample") && (
-                          <span className="rounded-pill bg-card px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted">
-                            {t.sampleBadge}
-                          </span>
+        <>
+          {/* Desktop table — hidden under md */}
+          <div className="hidden overflow-x-auto rounded-card border border-divider bg-surface md:block">
+            <table className="w-full border-collapse text-sm">
+              <thead className="bg-card">
+                <tr className="text-left text-xs font-semibold uppercase tracking-wider text-muted">
+                  <th className="px-4 py-3">{t.dateCol}</th>
+                  <th className="px-4 py-3">{t.merchantCol}</th>
+                  <th className="px-4 py-3">{t.categoryCol}</th>
+                  <th className="px-4 py-3">{t.accountCol}</th>
+                  <th className="px-4 py-3 text-right">{t.amountCol}</th>
+                  <th className="w-8 px-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((r) => {
+                  const income = r.amount_sen > 0;
+                  const cat = r.category_id ? catById[r.category_id] : null;
+                  const acct = r.account_id ? acctById[r.account_id] : null;
+                  return (
+                    <tr key={r.id} className="border-t border-divider hover:bg-card">
+                      <td className="px-4 py-3">{formatDate(r.date)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span>{r.merchant || "—"}</span>
+                          {(r.tags ?? []).includes("sample") && (
+                            <span className="rounded-pill bg-card px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted">
+                              {t.sampleBadge}
+                            </span>
+                          )}
+                          {r.receipt_path && <ReceiptLink path={r.receipt_path} label={t.viewReceipt} />}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">{cat?.name ?? "—"}</td>
+                      <td className="px-4 py-3">{acct?.name ?? "—"}</td>
+                      <td
+                        className={cn(
+                          "px-4 py-3 text-right font-semibold tabular-nums",
+                          income ? "text-accent" : "text-ink",
                         )}
-                        {r.receipt_path && <ReceiptLink path={r.receipt_path} label={t.viewReceipt} />}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">{cat?.name ?? "—"}</td>
-                    <td className="px-4 py-3">{acct?.name ?? "—"}</td>
-                    <td
+                      >
+                        {(income ? "+" : "") + fmoney(r.amount_sen, { currency })}
+                      </td>
+                      <td className="px-2 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => {
+                              setEditingRow(r);
+                              setQuickAddOpen(false);
+                              window.scrollTo({ top: 0, behavior: "smooth" });
+                            }}
+                            className="rounded p-1 text-muted transition-colors hover:text-brand"
+                            aria-label={strings.common.edit ?? "Edit"}
+                            title={strings.common.edit ?? "Edit"}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => onDelete(r)}
+                            className="rounded p-1 text-muted transition-colors hover:text-danger"
+                            aria-label={strings.common.delete}
+                            title={strings.common.delete}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile card list — visible under md */}
+          <div className="flex flex-col gap-2 md:hidden">
+            {filtered.map((r) => {
+              const income = r.amount_sen > 0;
+              const cat = r.category_id ? catById[r.category_id] : null;
+              const acct = r.account_id ? acctById[r.account_id] : null;
+              return (
+                <div
+                  key={r.id}
+                  className="rounded-card border border-divider bg-surface px-4 py-3"
+                >
+                  {/* Top row: merchant + amount */}
+                  <div className="flex items-baseline justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="truncate font-semibold text-ink">
+                        {r.merchant || "—"}
+                      </span>
+                      {(r.tags ?? []).includes("sample") && (
+                        <span className="shrink-0 rounded-pill bg-card px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted">
+                          {t.sampleBadge}
+                        </span>
+                      )}
+                      {r.receipt_path && (
+                        <span className="shrink-0">
+                          <ReceiptLink path={r.receipt_path} label={t.viewReceipt} />
+                        </span>
+                      )}
+                    </div>
+                    <span
                       className={cn(
-                        "px-4 py-3 text-right font-semibold tabular-nums",
+                        "shrink-0 font-semibold tabular-nums",
                         income ? "text-accent" : "text-ink",
                       )}
                     >
                       {(income ? "+" : "") + fmoney(r.amount_sen, { currency })}
-                    </td>
-                    <td className="px-2 py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => {
-                            setEditingRow(r);
-                            setQuickAddOpen(false);
-                            window.scrollTo({ top: 0, behavior: "smooth" });
-                          }}
-                          className="rounded p-1 text-muted transition-colors hover:text-brand"
-                          aria-label={strings.common.edit ?? "Edit"}
-                          title={strings.common.edit ?? "Edit"}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => onDelete(r)}
-                          className="rounded p-1 text-muted transition-colors hover:text-danger"
-                          aria-label={strings.common.delete}
-                          title={strings.common.delete}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    </span>
+                  </div>
+                  {/* Sub row: date · category · account + actions */}
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <div className="min-w-0 truncate text-xs text-muted">
+                      {formatDate(r.date)}
+                      {cat?.name ? ` · ${cat.name}` : ""}
+                      {acct?.name ? ` · ${acct.name}` : ""}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setEditingRow(r);
+                          setQuickAddOpen(false);
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
+                        className="rounded p-1.5 text-muted transition-colors active:text-brand"
+                        aria-label={strings.common.edit ?? "Edit"}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => onDelete(r)}
+                        className="rounded p-1.5 text-muted transition-colors active:text-danger"
+                        aria-label={strings.common.delete}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
 
       {/* Toast region */}

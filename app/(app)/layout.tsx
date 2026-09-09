@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "./actions";
+import { BottomTabBar } from "@/components/app-shell/BottomTabBar";
 
 /**
  * Authenticated app shell. Middleware already redirects unauthenticated
@@ -26,8 +27,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ];
 
   return (
-    <div className="min-h-screen pl-[220px]">
-      <aside className="fixed inset-y-0 left-0 z-10 flex w-[200px] flex-col gap-5 border-r border-divider bg-card p-5 shadow-[4px_0_20px_rgba(62,42,31,.05)]">
+    <div className="min-h-screen md:pl-[220px]">
+      {/* Sidebar — desktop only. Mobile users get the bottom tab bar. */}
+      <aside className="fixed inset-y-0 left-0 z-10 hidden w-[200px] flex-col gap-5 border-r border-divider bg-card p-5 shadow-[4px_0_20px_rgba(62,42,31,.05)] md:flex">
         <div className="flex items-center justify-between">
           <div className="font-display text-xl font-bold text-brand">FASA Duit</div>
         </div>
@@ -52,9 +54,27 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </form>
       </aside>
 
-      <main className="w-full px-7 pb-10 pt-6">
+      {/* Mobile-only top bar: brand + log-out so users can still reach it
+          without the desktop sidebar. Hidden on desktop. */}
+      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-divider bg-bg/85 px-4 py-3 backdrop-blur md:hidden">
+        <div className="font-display text-lg font-bold text-brand">FASA Duit</div>
+        <form action={logout}>
+          <button
+            type="submit"
+            className="rounded-lg border border-divider px-3 py-1.5 text-sm font-medium text-muted"
+          >
+            Log out
+          </button>
+        </form>
+      </header>
+
+      {/* Main content. Extra bottom padding on mobile so the bottom tab bar
+          doesn't cover the last row. */}
+      <main className="w-full px-4 pb-24 pt-4 md:px-7 md:pb-10 md:pt-6">
         <div className="mx-auto max-w-[1120px]">{children}</div>
       </main>
+
+      <BottomTabBar />
     </div>
   );
 }

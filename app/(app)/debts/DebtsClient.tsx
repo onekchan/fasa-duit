@@ -584,9 +584,10 @@ function DebtRow({
   const interestLabel = islamic ? t.amortCols.profit : t.amortCols.interest;
 
   return (
-    <div className="rounded-card border border-divider bg-surface px-5 py-4">
-      <div className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-4">
-        <div className="min-w-0">
+    <div className="rounded-card border border-divider bg-surface px-4 py-3 sm:px-5 sm:py-4">
+      {/* Top row: name + shariah pill + action icons on the right (always inline) */}
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold text-ink">{debt.name}</span>
             {islamic && (
@@ -599,17 +600,12 @@ function DebtRow({
               </span>
             )}
           </div>
-          <div className="text-xs text-muted">
-            {t.types[debt.type] ?? debt.type}
-          </div>
+          <div className="text-xs text-muted">{t.types[debt.type] ?? debt.type}</div>
         </div>
-        <Stat label={t.row.balance} value={fmoney(debt.balance_sen, { currency })} />
-        <Stat label={rateLabel} value={(debt.apr_bps / 100).toFixed(2) + "%"} />
-        <Stat label={t.row.min} value={fmoney(debt.min_payment_sen, { currency })} />
-        <div className="flex gap-1">
+        <div className="flex shrink-0 gap-1">
           <button
             onClick={onEdit}
-            className="rounded p-1 text-muted hover:text-brand"
+            className="rounded p-1.5 text-muted hover:text-brand"
             aria-label={strings.common.edit}
             title={strings.common.edit}
           >
@@ -617,13 +613,20 @@ function DebtRow({
           </button>
           <button
             onClick={onDelete}
-            className="rounded p-1 text-muted hover:text-danger"
+            className="rounded p-1.5 text-muted hover:text-danger"
             aria-label={strings.common.delete}
             title={strings.common.delete}
           >
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
+      </div>
+      {/* Stats — three columns on mobile too, but with smaller labels and
+          balanced spacing. Desktop keeps the same look. */}
+      <div className="mt-3 grid grid-cols-3 gap-3 border-t border-divider pt-3 sm:mt-2 sm:gap-4 sm:border-t-0 sm:pt-0">
+        <Stat label={t.row.balance} value={fmoney(debt.balance_sen, { currency })} />
+        <Stat label={rateLabel} value={(debt.apr_bps / 100).toFixed(2) + "%"} />
+        <Stat label={t.row.min} value={fmoney(debt.min_payment_sen, { currency })} />
       </div>
       {sched.length > 0 && (
         <>
@@ -685,11 +688,11 @@ function DebtRow({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="text-right">
+    <div className="text-left sm:text-right">
       <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">
         {label}
       </div>
-      <div className="mt-0.5 font-semibold tabular-nums">{value}</div>
+      <div className="mt-0.5 text-sm font-semibold tabular-nums">{value}</div>
     </div>
   );
 }

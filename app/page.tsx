@@ -63,14 +63,14 @@ function TopNav() {
 // ─── Hero ────────────────────────────────────────────────────────────────────
 function Hero() {
   return (
-    <section className="mx-auto max-w-6xl px-6 pt-14 sm:pt-24">
+    <section className="mx-auto max-w-6xl px-5 pt-10 sm:px-6 sm:pt-24">
       <div className="grid gap-12 lg:grid-cols-[1.15fr_1fr] lg:items-center">
         <div>
           <span className="inline-flex items-center gap-1.5 rounded-pill bg-brand/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-brand">
             <Sparkles className="h-3 w-3" aria-hidden="true" />
             Made for Malaysia — free open beta
           </span>
-          <h1 className="mt-5 font-display text-4xl leading-[1.1] tracking-tight sm:text-5xl md:text-6xl">
+          <h1 className="mt-5 font-display text-[2.25rem] leading-[1.1] tracking-tight sm:text-5xl md:text-6xl">
             A warm, calm budget tracker built for{" "}
             <span className="text-brand">Ringgit-first</span> life.
           </h1>
@@ -180,7 +180,7 @@ function FeatureStrip() {
   ];
 
   return (
-    <section className="mx-auto max-w-6xl px-6 py-24">
+    <section className="mx-auto max-w-6xl px-5 py-16 sm:px-6 sm:py-24">
       <div className="mx-auto max-w-2xl text-center">
         <h2 className="font-display text-3xl sm:text-4xl">
           Everything you need. Nothing you don&apos;t.
@@ -212,8 +212,8 @@ function FeatureStrip() {
 // ─── Dashboard mockup ────────────────────────────────────────────────────────
 function DashboardMockup() {
   return (
-    <section className="border-y border-divider bg-card/40 py-24">
-      <div className="mx-auto max-w-6xl px-6">
+    <section className="border-y border-divider bg-card/40 py-16 sm:py-24">
+      <div className="mx-auto max-w-6xl px-5 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="font-display text-3xl sm:text-4xl">
             One warm dashboard. Everything visible.
@@ -386,7 +386,7 @@ function TrustStrip() {
     { title: "Yours to own", body: "One click to export everything as JSON." },
   ];
   return (
-    <section className="mx-auto max-w-6xl px-6 py-24">
+    <section className="mx-auto max-w-6xl px-5 py-16 sm:px-6 sm:py-24">
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {points.map((p) => (
           <div key={p.title} className="flex items-start gap-3">
@@ -427,8 +427,8 @@ function Faq() {
     },
   ];
   return (
-    <section className="border-t border-divider bg-card/40 py-24">
-      <div className="mx-auto max-w-3xl px-6">
+    <section className="border-t border-divider bg-card/40 py-16 sm:py-24">
+      <div className="mx-auto max-w-3xl px-5 sm:px-6">
         <h2 className="font-display text-3xl sm:text-4xl">Common questions</h2>
         <div className="mt-8 flex flex-col divide-y divide-divider">
           {items.map((it) => (

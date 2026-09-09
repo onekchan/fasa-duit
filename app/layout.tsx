@@ -16,6 +16,18 @@ const inter = Inter({
   weight: ["400", "500", "600", "700"],
 });
 
+// Resolve the site URL for OG tags + metadata. Priority:
+//   1. NEXT_PUBLIC_SITE_URL if you set it (e.g. a custom domain).
+//   2. VERCEL_URL which Vercel automatically injects into every deployment
+//      (like `fasa-duit-abc.vercel.app`). We prefix it with https.
+//   3. Localhost for local dev.
+// Uses `||` (not `??`) so an empty-string env var falls through to the next
+// option instead of tripping `new URL("")`.
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "") ||
+  "http://localhost:3000";
+
 export const metadata: Metadata = {
   title: {
     default: "FASA Duit — Malaysian-first budget tracker",
@@ -23,7 +35,7 @@ export const metadata: Metadata = {
   },
   description:
     "A warm, calm budget tracker built for Malaysia. 50/30/20 by default, sinking funds, debt payoff, all in Ringgit. English + Bahasa Malaysia.",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+  metadataBase: new URL(siteUrl),
 };
 
 export default function RootLayout({

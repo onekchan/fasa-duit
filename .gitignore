@@ -35,7 +35,9 @@ supabase/.branches
 supabase/.temp
 
 # generated types (regenerate with `npm run db:types`)
-types/supabase.ts
+# Supabase-generated types are committed so Vercel builds don't need a live
+# DB connection. Regenerate with `npm run db:types` after each migration.
+# types/supabase.ts
 
 # vercel
 .vercel

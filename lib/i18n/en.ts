@@ -7,6 +7,7 @@ export const en = {
   tabs: {
     dashboard: "Dashboard",
     transactions: "Transactions",
+    recurring: "Recurring",
     funds: "Funds",
     debts: "Debts",
     settings: "Settings",
@@ -343,5 +344,61 @@ export const en = {
     sampleBadge: "sample",
     viewReceipt: "View receipt",
     saveFailed: "Couldn’t save — please try again.",
+  },
+  recurring: {
+    title: "Recurring",
+    subhead:
+      "Salary, rent, streaming, insurance — anything on a monthly rhythm. FASA Duit posts them for you.",
+    new: "New recurring",
+    nextOn: "Next: {date}",
+    sections: {
+      dueSoon: "Due within 7 days",
+      active: "Active",
+      paused: "Paused",
+    },
+    totals: {
+      count: "Templates",
+      income: "Monthly income",
+      expense: "Monthly outflow",
+      net: "Net per month",
+    },
+    badges: {
+      manual: "Manual",
+    },
+    actions: {
+      postNow: "Post now",
+      setAuto: "Enable auto-post",
+      setManual: "Disable auto-post",
+      pause: "Pause",
+      resume: "Resume",
+    },
+    empty: {
+      title: "No recurring templates yet",
+      note: "Add the transactions that happen like clockwork every month — salary on the 25th, rent on the 1st, Netflix on the 15th. FASA Duit will post them for you.",
+      cta: "Add first template",
+    },
+    editor: {
+      titleNew: "New recurring",
+      titleEdit: "Edit recurring",
+      name: "Name",
+      namePh: "e.g. Salary, Rent, Netflix",
+      nameHint: "Shown in the list and used as the merchant fallback.",
+      amount: "Amount",
+      day: "Day of month",
+      dayHint: "1–31. If the month is shorter, we post on the last day.",
+      merchant: "Merchant (optional)",
+      merchantPh: "Auto-filled from Name if empty",
+      notes: "Notes (optional)",
+      notesPh: "Anything you want on the transaction row",
+      autoPost: "Auto-post every month",
+      autoPostHint:
+        "Off = template only appears in the “Due” list waiting for a tap. On = FASA Duit posts it automatically overnight.",
+      previewNext: "First post: {date}",
+    },
+    confirmDelete:
+      "Delete this recurring template? Past transactions it already posted will stay.",
+    deletedToast: "Recurring deleted",
+    savedToast: "Recurring saved",
+    postedToast: "Transaction posted",
   },
 };

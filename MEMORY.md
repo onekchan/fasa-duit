@@ -167,3 +167,21 @@ _(Add dated entries here as we make choices that aren't derivable from the brief
 - BM catalog fully covered for the wizard.
 - Small utility: `fmt(str, vars)` interpolates `{n}` placeholders (used for step count + category count strings).
 - `currencySymbol(code)` helper renders the prefix in money inputs.
+
+### 2026-09-09 — Recurring transactions shipped (v1)
+- **Scope locked (all recommended options taken):** fully-automated cron post + per-template `auto_post` opt-out, monthly-on-day-N schedule only, dedicated `/recurring` page with sidebar entry.
+- **Migration `20260910000000_recurring_v1.sql`:** adds `name TEXT NOT NULL`, `auto_post BOOLEAN DEFAULT TRUE`, `last_run DATE NULLABLE` to `public.recurring`; enables the table on `supabase_realtime`; ships `post_due_recurring()` — a `SECURITY DEFINER plpgsql` function that iterates every non-archived, `auto_post=true`, `next_run<=today` template, inserts the transaction (with `recurring_id` back-link), and advances `next_run` one month with month-end clamping. `EXECUTE` revoked from anon/authenticated, granted to `service_role` only.
+- **Types (`types/supabase.ts`) hand-edited** to add the three new columns + the `post_due_recurring` function signature. Regenerate with `npm run db:types` once the migration is applied to hosted Supabase.
+- **`lib/recurring.ts`:** typed schedule (`MonthlySchedule = {freq:"monthly", day:1..31}`) and template (`RecurringTemplate`) + `firstMonthlyRun` / `nextMonthlyRunAfter` / `describeSchedule` (EN + BM). End-of-month clamping in JS matches the SQL side (`day=31` in Feb → 28/29). `partsOf(iso)` handles the `noUncheckedIndexedAccess` destructure.
+- **Server actions (`app/(app)/recurring/actions.ts`):** `createRecurring` / `updateRecurring` / `setRecurringArchived` (pause+resume) / `setRecurringAutoPost` / `deleteRecurring` / `postRecurringNow`. All wrapped by `requireUserId` and revalidatePath. `postRecurringNow` inserts a transaction dated today (RLS-scoped, no service role), then advances `last_run` + `next_run`.
+- **`/recurring` page + client:** three sections — **Due within 7 days** (warning tone, includes overdue), **Active**, **Paused**. Row actions: Post now (paper plane) / Toggle auto-post (zap, warning-colored when on) / Pause-resume / Edit / Delete. Editor is an inline `Card` (matches Funds shape): flow toggle (Expense/Income), name, amount (calc-style MoneyInput), day-of-month (1–31), merchant (falls back to name), account, category, notes, `auto_post` checkbox, live "First post: DD/MM/YYYY" preview. Realtime channel with random-suffix name so React 19 Strict Mode double-mount doesn't collide.
+- **Totals strip:** Templates count / Monthly income / Monthly outflow / Net per month. Ignores paused rows.
+- **Cron (`/api/cron/recurring/route.ts` + `vercel.json`):** Vercel Cron hits the route once daily at **17:00 UTC = 01:00 MYT**. Verifies `Authorization: Bearer $CRON_SECRET`, then calls `supabase.rpc("post_due_recurring")` via the service-role client and returns `{ok, posted, at}`. **Deploy note:** must set `CRON_SECRET` in Vercel env (any random 32+ char string) BEFORE the cron fires — otherwise the route replies 500 and the cron slot logs the failure.
+- **Nav:** sidebar gains "Recurring" (Repeat icon in the client bar); BottomTabBar grows from 5 to 6 columns with abbreviated labels (`Home / Log / Recur. / Funds / Debts / More`). Sidebar order: Dashboard → Transactions → Recurring → Funds → Debts → Settings.
+- **BM parity:** full `t.recurring.*` catalog on both `en.ts` and `ms.ts` (satisfies-check enforces shape). `tabs.recurring` added to both.
+- **Type-check + build both green.** `next build` shows `/recurring` at 7.62 kB / 194 kB First Load and `/api/cron/recurring` at 146 B.
+- **Deploy checklist for this slice:**
+  1. `npm run db:push` (or dashboard-run) the migration.
+  2. Set `CRON_SECRET` env var in Vercel (Production + Preview).
+  3. `git push origin main` — Vercel picks up `vercel.json` and registers the daily cron.
+  4. Optional: hit `/api/cron/recurring` manually with `curl -H "Authorization: Bearer <secret>"` to verify.

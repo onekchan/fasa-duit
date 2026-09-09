@@ -22,6 +22,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const nav: Array<{ href: string; label: string }> = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/transactions", label: "Transactions" },
+    { href: "/recurring", label: "Recurring" },
     { href: "/funds", label: "Funds" },
     { href: "/debts", label: "Debts" },
     { href: "/settings", label: "Settings" },

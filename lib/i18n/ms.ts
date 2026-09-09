@@ -7,6 +7,7 @@ export const ms = {
   tabs: {
     dashboard: "Papan Pemuka",
     transactions: "Transaksi",
+    recurring: "Berulang",
     funds: "Tabung",
     debts: "Hutang",
     settings: "Tetapan",
@@ -343,5 +344,61 @@ export const ms = {
     sampleBadge: "contoh",
     viewReceipt: "Lihat resit",
     saveFailed: "Tidak dapat disimpan — cuba lagi.",
+  },
+  recurring: {
+    title: "Berulang",
+    subhead:
+      "Gaji, sewa, langganan, insurans — apa sahaja yang berlaku setiap bulan. FASA Duit akan post untuk anda.",
+    new: "Baru berulang",
+    nextOn: "Seterusnya: {date}",
+    sections: {
+      dueSoon: "Perlu dalam 7 hari",
+      active: "Aktif",
+      paused: "Dijeda",
+    },
+    totals: {
+      count: "Templat",
+      income: "Pendapatan bulanan",
+      expense: "Perbelanjaan bulanan",
+      net: "Bersih sebulan",
+    },
+    badges: {
+      manual: "Manual",
+    },
+    actions: {
+      postNow: "Post sekarang",
+      setAuto: "Aktifkan auto-post",
+      setManual: "Matikan auto-post",
+      pause: "Jeda",
+      resume: "Sambung",
+    },
+    empty: {
+      title: "Belum ada templat berulang",
+      note: "Tambah transaksi yang berlaku macam jam setiap bulan — gaji hari 25, sewa hari 1, Netflix hari 15. FASA Duit akan post untuk anda.",
+      cta: "Tambah templat pertama",
+    },
+    editor: {
+      titleNew: "Baru berulang",
+      titleEdit: "Sunting berulang",
+      name: "Nama",
+      namePh: "cth. Gaji, Sewa, Netflix",
+      nameHint: "Dipaparkan dalam senarai dan jadi peniaga jika kosong.",
+      amount: "Jumlah",
+      day: "Hari dalam bulan",
+      dayHint: "1–31. Jika bulan lebih pendek, kami post pada hari terakhir.",
+      merchant: "Peniaga (pilihan)",
+      merchantPh: "Diisi dari Nama jika kosong",
+      notes: "Nota (pilihan)",
+      notesPh: "Apa-apa yang anda mahu pada baris transaksi",
+      autoPost: "Auto-post setiap bulan",
+      autoPostHint:
+        "Mati = templat hanya muncul dalam senarai “Perlu” menunggu ketikan. Hidup = FASA Duit post secara automatik pada waktu malam.",
+      previewNext: "Post pertama: {date}",
+    },
+    confirmDelete:
+      "Padam templat berulang ini? Transaksi lepas yang sudah di-post akan kekal.",
+    deletedToast: "Berulang dipadam",
+    savedToast: "Berulang disimpan",
+    postedToast: "Transaksi di-post",
   },
 };

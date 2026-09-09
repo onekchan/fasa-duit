@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Coins, PiggyBank, Receipt, Settings } from "lucide-react";
+import { BarChart3, Coins, PiggyBank, Receipt, Repeat, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -16,12 +16,16 @@ import { cn } from "@/lib/utils";
  */
 export function BottomTabBar() {
   const path = usePathname();
+  // 6 tabs — grid-cols-6. At 375px this leaves ~62px per tab, comfortably wide
+  // enough for a 20px icon + 11px label. "Recur." is abbreviated so the wider
+  // "Recurring" label doesn't force a two-line wrap.
   const tabs: Array<{ href: string; label: string; Icon: React.ComponentType<{ className?: string }> }> = [
-    { href: "/dashboard", label: "Dashboard", Icon: BarChart3 },
+    { href: "/dashboard", label: "Home", Icon: BarChart3 },
     { href: "/transactions", label: "Log", Icon: Receipt },
+    { href: "/recurring", label: "Recur.", Icon: Repeat },
     { href: "/funds", label: "Funds", Icon: PiggyBank },
     { href: "/debts", label: "Debts", Icon: Coins },
-    { href: "/settings", label: "Settings", Icon: Settings },
+    { href: "/settings", label: "More", Icon: Settings },
   ];
   return (
     <nav
@@ -32,7 +36,7 @@ export function BottomTabBar() {
         "pb-[env(safe-area-inset-bottom)]",
       )}
     >
-      <ul className="grid grid-cols-5">
+      <ul className="grid grid-cols-6">
         {tabs.map(({ href, label, Icon }) => {
           const active = path === href || path?.startsWith(href + "/");
           return (

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signup } from "./actions";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 
 export default function SignupPage({
   searchParams,
@@ -68,12 +69,9 @@ async function SignupForm({
 
       {sp.error && <p className="text-sm text-danger">{sp.error}</p>}
 
-      <button
-        type="submit"
-        className="mt-2 rounded-lg bg-brand px-4 py-2.5 font-semibold text-[color:#FFF6EC] shadow-sm transition hover:brightness-105"
-      >
+      <SubmitButton className="mt-2 !py-2.5" loadingLabel="Creating account…">
         Create account
-      </button>
+      </SubmitButton>
     </form>
   );
 }

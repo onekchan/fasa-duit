@@ -359,8 +359,8 @@ export function OnboardingWizard({
               {w.next}
             </Button>
           ) : (
-            <Button type="button" onClick={submit} disabled={isPending}>
-              {isPending ? "…" : w.finish}
+            <Button type="button" onClick={submit} loading={isPending}>
+              {w.finish}
             </Button>
           )}
         </div>

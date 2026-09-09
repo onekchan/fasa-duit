@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { login } from "./actions";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 
 /**
  * Login page. Server component + a Server Action for the submit.
@@ -60,12 +61,9 @@ async function LoginForm({
 
       {sp.error && <p className="text-sm text-danger">{sp.error}</p>}
 
-      <button
-        type="submit"
-        className="mt-2 rounded-lg bg-brand px-4 py-2.5 font-semibold text-[color:#FFF6EC] shadow-sm transition hover:brightness-105"
-      >
+      <SubmitButton className="mt-2 !py-2.5" loadingLabel="Signing in…">
         Sign in
-      </button>
+      </SubmitButton>
     </form>
   );
 }

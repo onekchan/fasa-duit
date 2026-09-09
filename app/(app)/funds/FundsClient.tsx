@@ -470,6 +470,9 @@ function FundEditor({
           {strings.common.save}
         </Button>
       </div>
+      {/* isPending is owned by the parent FundsClient; the editor delegates
+          save via onSave, so the whole card just visually stays clickable —
+          the parent's toast surface reports errors if anything fails. */}
     </Card>
   );
 }

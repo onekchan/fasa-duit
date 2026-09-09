@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "./actions";
 import { BottomTabBar } from "@/components/app-shell/BottomTabBar";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 
 /**
  * Authenticated app shell. Middleware already redirects unauthenticated
@@ -45,12 +46,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           ))}
         </nav>
         <form action={logout} className="mt-auto">
-          <button
-            type="submit"
-            className="w-full rounded-lg border border-divider px-3 py-2 text-sm font-medium text-muted transition hover:bg-surface hover:text-ink"
+          <SubmitButton
+            variant="ghost"
+            className="w-full !border-divider !text-muted"
+            loadingLabel="Signing out…"
           >
             Log out
-          </button>
+          </SubmitButton>
         </form>
       </aside>
 
@@ -59,12 +61,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-divider bg-bg/85 px-4 py-3 backdrop-blur md:hidden">
         <div className="font-display text-lg font-bold text-brand">FASA Duit</div>
         <form action={logout}>
-          <button
-            type="submit"
-            className="rounded-lg border border-divider px-3 py-1.5 text-sm font-medium text-muted"
+          <SubmitButton
+            variant="ghost"
+            className="!py-1.5 !text-sm !text-muted"
+            loadingLabel="…"
           >
             Log out
-          </button>
+          </SubmitButton>
         </form>
       </header>
 

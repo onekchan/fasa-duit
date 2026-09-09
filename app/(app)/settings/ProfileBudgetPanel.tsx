@@ -139,7 +139,8 @@ export function ProfileBudgetPanel({
           <Button
             type="button"
             onClick={commitSplit}
-            disabled={!splitValid || isPending}
+            disabled={!splitValid}
+            loading={isPending}
             className="ml-auto"
           >
             {p.saveSplit}

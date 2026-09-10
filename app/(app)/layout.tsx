@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "./actions";
 import { BottomTabBar } from "@/components/app-shell/BottomTabBar";
+import { SideNav } from "@/components/app-shell/SideNav";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { ThemeApplier } from "@/components/app-shell/ThemeApplier";
 
@@ -30,15 +30,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .single();
   const theme = ((profile?.theme as "system" | "light" | "dark" | undefined) ?? "system");
 
-  const nav: Array<{ href: string; label: string }> = [
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/transactions", label: "Transactions" },
-    { href: "/recurring", label: "Recurring" },
-    { href: "/funds", label: "Funds" },
-    { href: "/debts", label: "Debts" },
-    { href: "/settings", label: "Settings" },
-  ];
-
   return (
     <div className="min-h-screen md:pl-[220px]">
       {/* Applies the user's chosen theme to <html data-theme="..."> so the
@@ -50,17 +41,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="flex items-center justify-between">
           <div className="font-display text-xl font-bold text-brand">FASA Duit</div>
         </div>
-        <nav className="flex flex-col gap-1">
-          {nav.map((n) => (
-            <Link
-              key={n.href}
-              href={n.href}
-              className="rounded-lg px-3 py-2 font-medium text-muted transition hover:bg-surface hover:text-ink"
-            >
-              {n.label}
-            </Link>
-          ))}
-        </nav>
+        <SideNav />
         <form action={logout} className="mt-auto">
           <SubmitButton
             variant="ghost"

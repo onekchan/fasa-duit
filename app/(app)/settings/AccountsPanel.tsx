@@ -171,8 +171,9 @@ export function AccountsPanel({
         </div>
       )}
 
-      {/* Add row */}
-      <div className="mt-4 grid grid-cols-[1fr_auto_auto] gap-2 rounded-lg border border-dashed border-divider bg-card p-3">
+      {/* Add row. Stacks on mobile so the type select (widest option is
+          "Investment") doesn't push the Add button off the card. */}
+      <div className="mt-4 flex flex-col gap-2 rounded-lg border border-dashed border-divider bg-card p-3 sm:grid sm:grid-cols-[1fr_auto_auto]">
         <TextInput
           placeholder={p.addPlaceholder}
           value={draftName}
@@ -188,6 +189,7 @@ export function AccountsPanel({
           value={draftType}
           onChange={(ev) => setDraftType(ev.target.value as AccountType)}
           aria-label="Type"
+          className="w-full sm:w-auto"
         >
           {TYPE_ORDER.map((k) => (
             <option key={k} value={k}>
@@ -195,7 +197,12 @@ export function AccountsPanel({
             </option>
           ))}
         </Select>
-        <Button type="button" onClick={addAccount} disabled={!draftName.trim()}>
+        <Button
+          type="button"
+          onClick={addAccount}
+          disabled={!draftName.trim()}
+          className="w-full sm:w-auto"
+        >
           {p.add}
         </Button>
       </div>
@@ -308,57 +315,63 @@ function AcctRow({
   return (
     <div
       className={cn(
-        "grid grid-cols-[1fr_auto_auto_auto] items-center gap-2 rounded-lg border border-divider bg-surface px-3 py-2",
+        // Mobile: two rows — name+archive on top, type+balance on bottom.
+        // Desktop: single row with name / type / balance / archive.
+        "flex flex-col gap-2 rounded-lg border border-divider bg-surface px-3 py-2 sm:grid sm:grid-cols-[1fr_auto_auto_auto] sm:items-center",
         acct.archived && "opacity-55",
       )}
     >
-      <input
-        type="text"
-        value={name}
-        onChange={(ev) => setName(ev.target.value)}
-        onBlur={commitName}
-        onKeyDown={(ev) => {
-          if (ev.key === "Enter") (ev.currentTarget as HTMLInputElement).blur();
-        }}
-        className="border-0 bg-transparent px-0 font-medium text-ink focus:rounded focus:bg-bg focus:px-2 focus:outline-none"
-        aria-label="Account name"
-      />
-      <Select
-        value={acct.type ?? "cash"}
-        onChange={(ev) => commitType(ev.target.value as AccountType)}
-        className="!py-1 !text-xs"
-        aria-label="Type"
-      >
-        {TYPE_ORDER.map((k) => (
-          <option key={k} value={k}>
-            {p.types[k]}
-          </option>
-        ))}
-      </Select>
-      <MoneyInput
-        prefix={sym}
-        value={bal}
-        onChange={(ev) => setBal(ev.target.value)}
-        onBlur={commitBalance}
-        onKeyDown={(ev) => {
-          if (ev.key === "Enter") (ev.currentTarget as HTMLInputElement).blur();
-        }}
-        aria-label={p.openingBalance}
-        className="w-36"
-        inputClassName="!py-1 text-right"
-      />
-      <button
-        onClick={toggleArchived}
-        className="rounded p-1.5 text-muted transition-colors hover:bg-card hover:text-ink"
-        title={acct.archived ? p.unarchive : p.archive}
-        aria-label={acct.archived ? p.unarchive : p.archive}
-      >
-        {acct.archived ? (
-          <ArchiveRestore className="h-4 w-4" />
-        ) : (
-          <Archive className="h-4 w-4" />
-        )}
-      </button>
+      <div className="flex items-center gap-2 sm:contents">
+        <input
+          type="text"
+          value={name}
+          onChange={(ev) => setName(ev.target.value)}
+          onBlur={commitName}
+          onKeyDown={(ev) => {
+            if (ev.key === "Enter") (ev.currentTarget as HTMLInputElement).blur();
+          }}
+          className="min-w-0 flex-1 border-0 bg-transparent px-0 font-medium text-ink focus:rounded focus:bg-bg focus:px-2 focus:outline-none"
+          aria-label="Account name"
+        />
+        <button
+          onClick={toggleArchived}
+          className="rounded p-1.5 text-muted transition-colors hover:bg-card hover:text-ink sm:order-last"
+          title={acct.archived ? p.unarchive : p.archive}
+          aria-label={acct.archived ? p.unarchive : p.archive}
+        >
+          {acct.archived ? (
+            <ArchiveRestore className="h-4 w-4" />
+          ) : (
+            <Archive className="h-4 w-4" />
+          )}
+        </button>
+      </div>
+      <div className="flex items-center gap-2 sm:contents">
+        <Select
+          value={acct.type ?? "cash"}
+          onChange={(ev) => commitType(ev.target.value as AccountType)}
+          className="!py-1 !text-xs"
+          aria-label="Type"
+        >
+          {TYPE_ORDER.map((k) => (
+            <option key={k} value={k}>
+              {p.types[k]}
+            </option>
+          ))}
+        </Select>
+        <MoneyInput
+          prefix={sym}
+          value={bal}
+          onChange={(ev) => setBal(ev.target.value)}
+          onBlur={commitBalance}
+          onKeyDown={(ev) => {
+            if (ev.key === "Enter") (ev.currentTarget as HTMLInputElement).blur();
+          }}
+          aria-label={p.openingBalance}
+          className="ml-auto w-32 sm:ml-0 sm:w-36"
+          inputClassName="!py-1 text-right"
+        />
+      </div>
     </div>
   );
 }

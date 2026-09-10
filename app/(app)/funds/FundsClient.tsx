@@ -647,7 +647,10 @@ function FundCard({
               {fmoney(s.linked_sen, { currency })} ({s.linkedCount})
             </div>
           )}
-          <div className="mt-3 grid grid-cols-[1fr_1fr_auto] gap-2">
+          {/* Contribution add-row. Stacks vertically on narrow phones (< 400px card
+              width) so the RM prefix chip and the "+" button never get clipped;
+              collapses back to a single row from sm: up. */}
+          <div className="mt-3 flex flex-col gap-2 sm:grid sm:grid-cols-[1fr_1fr_auto]">
             <TextInput type="date" value={dt} onChange={(ev) => setDt(ev.target.value)} />
             <MoneyInput
               prefix={sym}
@@ -662,8 +665,13 @@ function FundCard({
               }}
               aria-label={t.log.addPh}
             />
-            <Button onClick={commitContrib} disabled={!pmoney(amt)}>
+            <Button
+              onClick={commitContrib}
+              disabled={!pmoney(amt)}
+              className="w-full sm:w-auto"
+            >
               <Plus className="h-4 w-4" />
+              <span className="sm:hidden">{t.log.addPh}</span>
             </Button>
           </div>
         </div>

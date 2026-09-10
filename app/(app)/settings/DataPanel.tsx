@@ -229,18 +229,25 @@ function DataRow({
   return (
     <div
       className={cn(
-        "grid grid-cols-[auto_1fr_auto] items-center gap-4 py-4",
+        // Mobile (<sm): icon + title on top row, hint below full-width, action
+        // pinned right — no more narrow squished text column. Desktop keeps
+        // the original three-column layout.
+        "flex flex-col gap-3 py-4 sm:grid sm:grid-cols-[auto_1fr_auto] sm:items-center sm:gap-4",
         !last && "border-b border-divider",
       )}
     >
-      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-card">
-        {icon}
+      <div className="flex items-center gap-3 sm:contents">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-card">
+          {icon}
+        </div>
+        <div className="min-w-0 flex-1 sm:min-w-0">
+          <div className="font-semibold text-ink">{title}</div>
+          <div className="mt-0.5 text-sm text-muted">{hint}</div>
+        </div>
       </div>
-      <div>
-        <div className="font-semibold text-ink">{title}</div>
-        <div className="mt-0.5 text-sm text-muted">{hint}</div>
+      <div className="flex justify-end sm:justify-start [&>*]:w-full sm:[&>*]:w-auto">
+        {action}
       </div>
-      <div>{action}</div>
     </div>
   );
 }

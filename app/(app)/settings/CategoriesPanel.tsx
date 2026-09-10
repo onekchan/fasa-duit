@@ -149,8 +149,10 @@ export function CategoriesPanel({
         </div>
       )}
 
-      {/* Add row */}
-      <div className="mt-4 grid grid-cols-[1fr_auto_auto] gap-2 rounded-lg border border-dashed border-divider bg-card p-3">
+      {/* Add row. On mobile the three fields stack vertically (name / bucket
+          select / Add button, each full-width) so the "Savings & Debt" option
+          never overflows the card. From sm: up it collapses into one row. */}
+      <div className="mt-4 flex flex-col gap-2 rounded-lg border border-dashed border-divider bg-card p-3 sm:grid sm:grid-cols-[1fr_auto_auto]">
         <TextInput
           placeholder={p.addPlaceholder}
           value={draftName}
@@ -166,12 +168,18 @@ export function CategoriesPanel({
           value={draftBucket}
           onChange={(ev) => setDraftBucket(ev.target.value as Bucket)}
           aria-label="Bucket"
+          className="w-full sm:w-auto"
         >
           <option value="needs">{p.buckets.needs}</option>
           <option value="wants">{p.buckets.wants}</option>
           <option value="savings">{p.buckets.savings}</option>
         </Select>
-        <Button type="button" onClick={addCategory} disabled={!draftName.trim()}>
+        <Button
+          type="button"
+          onClick={addCategory}
+          disabled={!draftName.trim()}
+          className="w-full sm:w-auto"
+        >
           {p.add}
         </Button>
       </div>

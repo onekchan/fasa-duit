@@ -85,6 +85,22 @@ export function ProfileBudgetPanel({
     post(fd);
   };
   const setField = (key: "currency" | "language" | "theme", value: string) => {
+    // Theme flips instantly on click — persist to DB in the background, but
+    // stamp <html data-theme="..."> now so the user sees the palette switch
+    // without waiting for the server round-trip + revalidate.
+    if (key === "theme" && typeof document !== "undefined") {
+      const root = document.documentElement;
+      if (value === "light" || value === "dark") {
+        root.setAttribute("data-theme", value);
+      } else {
+        root.removeAttribute("data-theme");
+      }
+      try {
+        localStorage.setItem("fasa-theme", value);
+      } catch {
+        /* private-mode / storage disabled — non-fatal. */
+      }
+    }
     const fd = new FormData();
     fd.set(key, value);
     post(fd);

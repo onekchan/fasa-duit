@@ -40,14 +40,40 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
 };
 
+/**
+ * Inline pre-hydration script that reads the user's saved theme preference
+ * from localStorage and stamps `data-theme="light"` or `data-theme="dark"` on
+ * `<html>` BEFORE the first paint — so a user who chose Light in a
+ * system-dark browser (or Dark in a system-light one) never sees the wrong
+ * palette flash. `system` (or no stored value) leaves the attribute alone so
+ * `prefers-color-scheme` wins.
+ */
+const themePreloadScript = `
+(function(){
+  try {
+    var t = localStorage.getItem('fasa-theme');
+    if (t === 'light' || t === 'dark') {
+      document.documentElement.setAttribute('data-theme', t);
+    }
+  } catch (e) { /* ignore — falls back to prefers-color-scheme */ }
+})();
+`;
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${fraunces.variable} ${inter.variable}`}>
+    <html
+      lang="en"
+      className={`${fraunces.variable} ${inter.variable}`}
+      // suppress the hydration warning triggered by the pre-hydration script
+      // legitimately mutating data-theme before React sees the tree
+      suppressHydrationWarning
+    >
       <body>
+        <script dangerouslySetInnerHTML={{ __html: themePreloadScript }} />
         <Suspense fallback={null}>
           <TopProgressBar />
         </Suspense>

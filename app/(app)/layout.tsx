@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { logout } from "./actions";
 import { BottomTabBar } from "@/components/app-shell/BottomTabBar";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { ThemeApplier } from "@/components/app-shell/ThemeApplier";
 
 /**
  * Authenticated app shell. Middleware already redirects unauthenticated
@@ -19,6 +20,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   if (!user) redirect("/login");
 
+  // Read the user's saved theme so ThemeApplier can stamp `data-theme` on
+  // <html>. "system" (or a fetch failure) leaves the attribute alone so
+  // prefers-color-scheme wins.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("theme")
+    .eq("user_id", user.id)
+    .single();
+  const theme = ((profile?.theme as "system" | "light" | "dark" | undefined) ?? "system");
+
   const nav: Array<{ href: string; label: string }> = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/transactions", label: "Transactions" },
@@ -30,6 +41,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen md:pl-[220px]">
+      {/* Applies the user's chosen theme to <html data-theme="..."> so the
+          design-token overrides in globals.css switch palettes even when the
+          OS preference disagrees. */}
+      <ThemeApplier theme={theme} />
       {/* Sidebar — desktop only. Mobile users get the bottom tab bar. */}
       <aside className="fixed inset-y-0 left-0 z-10 hidden w-[200px] flex-col gap-5 border-r border-divider bg-card p-5 shadow-[4px_0_20px_rgba(62,42,31,.05)] md:flex">
         <div className="flex items-center justify-between">

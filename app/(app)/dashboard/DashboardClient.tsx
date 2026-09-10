@@ -443,7 +443,9 @@ function Meter({
 
   return (
     <div className="my-3">
-      <div className="mb-1.5 flex items-baseline justify-between">
+      {/* Mobile: label stacks above the stats line so the two never collide
+          at 375px. Desktop keeps them on the same baseline row via sm:. */}
+      <div className="mb-1.5 flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-2">
         <span className="font-semibold">{label}</span>
         <span className="text-xs text-muted tabular-nums">
           {fmoney(spent, { currency })} {t.spent} · {fmoney(Math.max(0, remaining), { currency })}{" "}

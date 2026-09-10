@@ -151,6 +151,66 @@ FASA/
 └── .env.local  (gitignored)
 ```
 
+## Testing & QA
+
+We ship without a Vitest/Playwright suite yet — until we do, every non-trivial slice gets these three passes before it's called done.
+
+### 1. Local build gate (mandatory)
+
+```bash
+npm run typecheck   # tsc --noEmit — must be clean
+npm run lint        # next lint — must be clean
+npm run build       # next build — must succeed with no runtime errors
+```
+
+If any of these fail, do NOT push. `types/supabase.ts` is committed (not gitignored) so Vercel builds don't need a live DB — after a migration, regenerate it with `npm run db:types` and include it in the same commit.
+
+### 2. Mobile-first responsive check (mandatory)
+
+Every screen must look right at **375 × 812** (iPhone SE / 13 mini floor). Use the browser dev tools' device toolbar or the in-app browser's `resize_window` at `preset: "mobile"`. Verify:
+
+- **Nothing overflows horizontally** — the body should never scroll sideways. If a control clips off the right edge of its card, it's a bug. Common culprits: multi-column grids (`grid-cols-[1fr_auto_auto]` with wide native `<select>` options like "Savings & Debt" or "Investment"), fixed-width inputs (`w-36`, `min-w-[220px]`), and horizontal action clusters.
+- **Every input, select, and button is fully visible and tappable** — currency-prefixed money inputs (RM chip + digits + `+` button) are the most-common victim.
+- **The bottom tab bar doesn't cover the last row** — `pb-24` on the main content area is our current floor.
+- **Fix pattern:** default to a stacked `flex-col` on mobile, promote to `sm:grid sm:grid-cols-[...]` from 640px+. Any control with a fixed width on desktop gets `w-full sm:w-auto`. For multi-column existing rows that must stay tabular on desktop, wrap sub-groups in a `<div class="flex sm:contents">` — that lets the mobile flex-col stack sub-groups while desktop's grid still sees each control as a direct grid child.
+- **Breakpoints we ship for:** 375 (iPhone SE), 390 (iPhone 14), 414 (iPhone 14 Plus), 768 (iPad portrait), 1024+ (desktop). If it works at 375 and 1024 it works everywhere in between.
+
+### 3. Production E2E smoke (mandatory after a deploy)
+
+After every push to `main`, once Vercel says "Ready", walk through the golden path on the live URL from an incognito window:
+
+1. Sign up as a fresh user → land on `/onboarding`
+2. Walk the 4-step wizard — income, currency, accounts, categories → land on `/dashboard`
+3. Add one transaction via QuickAdd → verify it appears in the ledger and the dashboard's 50/30/20 meters move
+4. Visit `/recurring` → add one monthly template → verify it appears; hit "Post now" → verify a transaction lands on `/transactions`
+5. Visit `/funds` → create one sinking fund → log one contribution → verify the progress bar moves
+6. Visit `/debts` → add one debt → verify the Snowball vs Avalanche comparator renders
+7. Visit `/settings` → toggle language EN↔BM → verify every visible string swaps
+8. Log out → the login page should render, not throw
+9. Log back in → all data intact
+
+Do this pass on **both** desktop viewport and 375×812 mobile — bugs specific to one usually show up here.
+
+### 4. Cron endpoint verification (only when the cron code changes)
+
+The Vercel Cron at `17:00 UTC` (`01:00 MYT`) hits `/api/cron/recurring` with `Authorization: Bearer $CRON_SECRET`. To verify the endpoint answers correctly without waiting for the schedule:
+
+```bash
+# Should return {"error":"Unauthorized"} — proves the route deployed AND CRON_SECRET is set
+curl.exe -i https://<domain>/api/cron/recurring
+
+# Should return {"ok":true,"posted":N,"at":"..."} — the actual happy path
+curl.exe -i -H "Authorization: Bearer $CRON_SECRET" https://<domain>/api/cron/recurring
+```
+
+`curl.exe` (not `curl`) on Windows PowerShell — the alias `curl` is `Invoke-WebRequest`, which handles `-H` differently and will error. The middleware in `lib/supabase/middleware.ts` MUST skip `/api/*` — if that guard is missing, unauthenticated cron hits get redirected to `/login` and Vercel sees the sign-in HTML instead of the JSON response.
+
+### 5. Accessibility spot-check (recommended per slice)
+
+- Keyboard-only walk of any new form: Tab through every control, Enter to submit, Esc to close.
+- Every actionable icon needs a `title` and `aria-label`. Every input needs a paired `<label>` or `aria-label`. No exceptions.
+- Focus-visible ring must land on a warm terracotta outline, never disappear behind the control.
+
 ## API Rules
 
 - **No public unauthenticated endpoints for user data.** RLS handles it at the DB layer.

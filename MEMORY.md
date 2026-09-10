@@ -185,3 +185,19 @@ _(Add dated entries here as we make choices that aren't derivable from the brief
   2. Set `CRON_SECRET` env var in Vercel (Production + Preview).
   3. `git push origin main` — Vercel picks up `vercel.json` and registers the daily cron.
   4. Optional: hit `/api/cron/recurring` manually with `curl -H "Authorization: Bearer <secret>"` to verify.
+
+### 2026-09-10 — Mobile responsive audit (E2E production pass at 375×812)
+
+Ran an in-app-browser E2E against production (`fasa-duit-pink.vercel.app`) at iPhone SE resolution (375×812) and fixed every screen where a control clipped, overflowed, or collided:
+
+- **Funds contribution row (`FundsClient.tsx`)** — was `grid-cols-[1fr_1fr_auto]`; at 375px the `RM` prefix chip on MoneyInput was clipped and the `+` button jammed off-screen. Now stacks (`flex-col sm:grid`); the button gets a full-width "Add contribution" label on mobile.
+- **Settings > Categories add-row (`CategoriesPanel.tsx`)** — was `grid-cols-[1fr_auto_auto]`; the native `<select>` sized to its widest option ("Savings & Debt") pushed the Add button off the card. Now stacks on mobile with the Select getting `w-full sm:w-auto`.
+- **Settings > Accounts add-row + existing rows (`AccountsPanel.tsx`)** — was 4 cols on existing rows (`[1fr_auto_auto_auto]`) which never fit at 375. Existing row now splits into two mobile sub-groups via `<div class="flex sm:contents">` so the desktop grid stays flat while mobile stacks name+archive over type+balance.
+- **Settings > Data panel rows (`DataPanel.tsx`)** — was `grid-cols-[auto_1fr_auto]`; icon + long description + wide button squished the text to ~8 chars per line. Now icon+title on top, description full-width below, action button full-width at bottom on mobile; desktop keeps the three-col layout.
+- **Dashboard bucket meters (`DashboardClient.tsx`)** — the label and stats spans in a `flex justify-between` collided at 375px because the total width exceeded the viewport, so "Needs" ran into "RM 506.20 spent · …" with no gap. Stacked via `flex-col sm:flex-row`.
+
+**Fix pattern documented in CLAUDE.md's new Testing section** (added this session): default to `flex-col` on mobile, promote to `sm:grid sm:grid-cols-[...]` from 640px. Fixed-width controls get `w-full sm:w-auto`. Multi-column existing rows that must stay tabular on desktop wrap sub-groups in `<div class="flex sm:contents">`.
+
+**E2E verified working at 375×812:** Login → Dashboard → Transactions ledger (mobile cards) → Recurring (empty state + editor sheet) → Funds (Hari Raya card + contributions log + add row) → Debts (Snowball/Avalanche primer + Conventional/Islamic toggle) → Settings (Profile + Accounts + Categories + Data). Bottom tab bar with 6 tabs sits above the iPhone safe area.
+
+**CLAUDE.md gained a Testing & QA section** with the 5 mandatory passes: local build gate (typecheck/lint/build), mobile-first responsive check (375×812 floor, common overflow culprits, fix pattern), production E2E smoke (9-step golden path on both desktop and mobile), cron endpoint verification (curl.exe with/without bearer), and a11y spot-check (keyboard walk + `title`+`aria-label` on every icon).

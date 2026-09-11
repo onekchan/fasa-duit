@@ -2,7 +2,7 @@
 
 Persistent context and rules for Claude Code working on **FASA Duit**, a Malaysian-first personal budget tracker shipping as a **multi-user full-stack SaaS web app**.
 
-> **Always read this file (and [MEMORY.md](MEMORY.md)) before responding to any task in this repo.** Product brief lives in [Reference/budget-tracker-prompt.md](Reference/budget-tracker-prompt.md); treat it as the source of truth for feature scope and acceptance criteria (ignore the parts that describe it as a single Claude Artifact — those are superseded by this file). Visual reference: [Reference/FASA Duit Budget Tracker.html](Reference/FASA%20Duit%20Budget%20Tracker.html). The existing single-file prototype at [index.html](index.html) is now a **UX + design reference** for porting, not the shipping product.
+> **Always read this file, [plan.md](plan.md), and [MEMORY.md](MEMORY.md) before responding to any task in this repo.** CLAUDE.md is the operational rulebook (how we build); [plan.md](plan.md) is the product + UX + business-model plan (what we're building and why); [MEMORY.md](MEMORY.md) is the running decisions log. Product brief lives in [Reference/budget-tracker-prompt.md](Reference/budget-tracker-prompt.md); treat it as the source of truth for feature scope and acceptance criteria (ignore the parts that describe it as a single Claude Artifact — those are superseded by this file). Visual reference: [Reference/FASA Duit Budget Tracker.html](Reference/FASA%20Duit%20Budget%20Tracker.html). The existing single-file prototype at [index.html](index.html) is now a **UX + design reference** for porting, not the shipping product.
 
 ## Workflow
 
@@ -13,10 +13,7 @@ Persistent context and rules for Claude Code working on **FASA Duit**, a Malaysi
 
 ## Product goal
 
-- **Audience:** Malaysian professionals + freelancers + young families primary, English-speaking global users secondary.
-- **Distribution:** Public multi-user SaaS. Anyone can sign up, land in the app in under 30 seconds, own their own data, and come back to find it exactly as they left it.
-- **Business model:** Free open beta first — no paywall. Add subscription tier later (Stripe + Billplz/ToyyibPay was the plan; not implemented yet).
-- **Success looks like:** a KL professional signs up on Sunday night, does the 4-step wizard, adds a week of transactions, and next weekend logs back in from their phone to reconcile — everything intact, dashboard warm and inviting, feels like coming home.
+Full audience, distribution, success criteria, UX principles (instant loading / no-sign-up value / mobile-first / dark mode), and the two-phase Freemium Hybrid business model live in **[plan.md](plan.md)**. Read it before proposing anything user-facing. In short: Malaysian-first SaaS budget tracker, warm and calm, ships free-with-ads in beta, splits into Free + Premium at V1.0.
 
 ## Tech Stack
 

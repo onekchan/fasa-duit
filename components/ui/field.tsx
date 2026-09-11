@@ -204,8 +204,14 @@ export function MoneyInput({
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         placeholder={rest.placeholder ?? "0.00"}
+        // `min-w-0` is critical: a text input's default min-content width is
+        // wide enough to hold its intrinsic 20-char size, so in narrow flex
+        // wrappers (e.g. `w-40`, `w-32` — Debts extra-payment slider, Accounts
+        // opening balance) it would overflow the parent whose `overflow-hidden`
+        // then clips the visible digits, making the field look empty even
+        // though the DOM value is correct.
         className={cn(
-          "flex-1 border-0 bg-transparent px-3 py-2 text-right tabular-nums outline-none",
+          "min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-right tabular-nums outline-none",
           inputClassName,
         )}
       />

@@ -162,7 +162,19 @@ npm run build       # next build — must succeed with no runtime errors
 
 If any of these fail, do NOT push. `types/supabase.ts` is committed (not gitignored) so Vercel builds don't need a live DB — after a migration, regenerate it with `npm run db:types` and include it in the same commit.
 
-### 2. Mobile-first responsive check (mandatory)
+### 2. Light + Dark theme check (mandatory)
+
+Every visual change must be tested in **BOTH** the Light and Dark palette. Toggle at Settings → Theme, or emulate directly with the in-app browser's `resize_window({ colorScheme: "light" | "dark" })`. Common failures to watch for:
+
+- **Invisible input text** — the text color and the parent background come from different token layers; a control that only used to render on `bg-card` may now sit on `bg-surface` in one theme and be unreadable. The 2026-09-11 MoneyInput slider bug was exactly this: overflow clipped the value in dark mode but stayed visible in light because the clipped area happened to fall over a different-colored region.
+- **Focus rings disappearing** into the background — `focus-visible` uses `outline: 2px solid var(--brand)` which must survive both palettes.
+- **Icons losing contrast** — `text-muted` on `bg-card` reads fine in light but can drop below WCAG AA in dark; check the muted secondary text on every card.
+- **Charts (Recharts) reading the wrong tokens** — donut segments have a `var(--bg)`-colored stroke to look like slices; verify neither theme makes the stroke invisible.
+- **Placeholder text** — inherits `color: rgba(muted, ...)`; verify it stays legible against the field's actual background in both themes.
+
+If you shipped it and forgot to check the other theme, you shipped half the feature.
+
+### 3. Mobile-first responsive check (mandatory)
 
 Every screen must look right at **375 × 812** (iPhone SE / 13 mini floor). Use the browser dev tools' device toolbar or the in-app browser's `resize_window` at `preset: "mobile"`. Verify:
 
@@ -172,7 +184,7 @@ Every screen must look right at **375 × 812** (iPhone SE / 13 mini floor). Use 
 - **Fix pattern:** default to a stacked `flex-col` on mobile, promote to `sm:grid sm:grid-cols-[...]` from 640px+. Any control with a fixed width on desktop gets `w-full sm:w-auto`. For multi-column existing rows that must stay tabular on desktop, wrap sub-groups in a `<div class="flex sm:contents">` — that lets the mobile flex-col stack sub-groups while desktop's grid still sees each control as a direct grid child.
 - **Breakpoints we ship for:** 375 (iPhone SE), 390 (iPhone 14), 414 (iPhone 14 Plus), 768 (iPad portrait), 1024+ (desktop). If it works at 375 and 1024 it works everywhere in between.
 
-### 3. Production E2E smoke (mandatory after a deploy)
+### 4. Production E2E smoke (mandatory after a deploy)
 
 After every push to `main`, once Vercel says "Ready", walk through the golden path on the live URL from an incognito window:
 
@@ -188,7 +200,7 @@ After every push to `main`, once Vercel says "Ready", walk through the golden pa
 
 Do this pass on **both** desktop viewport and 375×812 mobile — bugs specific to one usually show up here.
 
-### 4. Cron endpoint verification (only when the cron code changes)
+### 5. Cron endpoint verification (only when the cron code changes)
 
 The Vercel Cron at `17:00 UTC` (`01:00 MYT`) hits `/api/cron/recurring` with `Authorization: Bearer $CRON_SECRET`. To verify the endpoint answers correctly without waiting for the schedule:
 
@@ -202,7 +214,7 @@ curl.exe -i -H "Authorization: Bearer $CRON_SECRET" https://<domain>/api/cron/re
 
 `curl.exe` (not `curl`) on Windows PowerShell — the alias `curl` is `Invoke-WebRequest`, which handles `-H` differently and will error. The middleware in `lib/supabase/middleware.ts` MUST skip `/api/*` — if that guard is missing, unauthenticated cron hits get redirected to `/login` and Vercel sees the sign-in HTML instead of the JSON response.
 
-### 5. Accessibility spot-check (recommended per slice)
+### 6. Accessibility spot-check (recommended per slice)
 
 - Keyboard-only walk of any new form: Tab through every control, Enter to submit, Esc to close.
 - Every actionable icon needs a `title` and `aria-label`. Every input needs a paired `<label>` or `aria-label`. No exceptions.

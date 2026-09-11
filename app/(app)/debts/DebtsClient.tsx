@@ -16,6 +16,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Field, MoneyInput, Select, TextInput } from "@/components/ui/field";
+import { AdSlot } from "@/components/ads/AdSlot";
 import { cn } from "@/lib/utils";
 import {
   createDebt,
@@ -361,6 +362,11 @@ export function DebtsClient({
                 </div>
               </div>
             </Card>
+
+            {/* Non-intrusive ad slot — natural pause between the strategy
+                primer and the extra-payment slider. Money inputs stay ad-free
+                per plan.md rules. */}
+            <AdSlot slotId="debts-between-primer-and-slider" placeholderLabel="Ad space · between primer and slider" />
 
             {/* Extra payment slider */}
             {activeDebts.length > 0 && (

@@ -74,6 +74,18 @@ export default function RootLayout({
     >
       <body>
         <script dangerouslySetInnerHTML={{ __html: themePreloadScript }} />
+        {/* EthicalAds loader — only injected when NEXT_PUBLIC_ADS_ENABLED === "1".
+            Kept out of dev + preview so beta testers never see a stray tracker
+            and no ad script slows down local iteration. `async` + `data-ea-npa`
+            (no personalized ads, i.e. no cookies) to stay privacy-friendly and
+            PDPA-safe. */}
+        {process.env.NEXT_PUBLIC_ADS_ENABLED === "1" && (
+          <script
+            async
+            src="https://media.ethicalads.io/media/client/ethicalads.min.js"
+            data-ea-npa="1"
+          />
+        )}
         <Suspense fallback={null}>
           <TopProgressBar />
         </Suspense>

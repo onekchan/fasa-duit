@@ -55,7 +55,7 @@ Two-phase rollout. Beta first (build audience + data), then V1.0 splits into Fre
 - **User experience:** everyone gets the full core engine, free.
 - **Monetization:** clean, non-intrusive banner ads on the site.
 - **Ad platforms to test (in order of feasibility for our traffic level):**
-  1. **EthicalAds** — great fit if our audience skews tech / financially literate; low barrier.
+  1. **EthicalAds** — great fit if our audience skews tech / financially literate; low barrier. **We ship placements against EthicalAds attribute names.**
   2. **Media.net** — Yahoo/Bing contextual ads; less strict than AdSense on early traffic.
   3. **BuySellAds** — direct-sold ad space; best CPM once we have consistent audience.
   4. **Google AdSense** — deferred. Strict traffic requirements and slow approval; revisit after 5k MAU.
@@ -63,6 +63,34 @@ Two-phase rollout. Beta first (build audience + data), then V1.0 splits into Fre
   - **No ads on the auth flow, the wizard, or the calc-style money inputs.** Anywhere the user is entering their real financial data is ad-free.
   - **No interstitials, no pop-ups, no auto-play video.** Static banners only.
   - **Above-the-fold on mobile stays ad-free** — the dashboard's 50/30/20 meters land in the first paint uninterrupted.
+
+#### Ad-slot infrastructure (shipped 2026-09-11)
+
+We built `components/ads/AdSlot.tsx` as the single reusable slot. It renders one of three states:
+
+1. **Premium bypass** — subscribed users get `null` so the third-party script never loads. Speed becomes a hidden bonus of paying.
+2. **Placeholder** — when `NEXT_PUBLIC_ADS_ENABLED !== "1"` (default in dev + preview + production-until-approved), a subtle warm dashed-outline card reading "Ad space · beta". Lets us design without loading trackers.
+3. **Live** — when the env flag is set AND EthicalAds has approved us, `<div data-ea-publisher="…" data-ea-slot="…">` is rendered and the root layout injects the EthicalAds loader script (`data-ea-npa="1"` = no personalized ads, so no cookies, PDPA-safe).
+
+**Placements shipped so far** (3 slots, all against these rules):
+
+| Slot id | Location | Why |
+| --- | --- | --- |
+| `txn-below-ledger` | `/transactions` — below the last row | Highest-viewed page in the app; user must scroll past their data to see it |
+| `debts-between-primer-and-slider` | `/debts` — between the Snowball/Avalanche primer card and the extra-payment slider | Natural pause in the reading flow; money inputs stay ad-free |
+| `landing-above-footer` | `/` — above the actual footer | Public page, counts anonymous impressions too |
+
+**Env vars to flip when EthicalAds approves us:**
+
+```bash
+# In Vercel → Production only. Preview and dev stay in placeholder mode.
+NEXT_PUBLIC_ADS_ENABLED=1
+NEXT_PUBLIC_ETHICALADS_PUBLISHER=fasa-duit    # or whatever slug they assign
+```
+
+No code change to switch — just set the two env vars, redeploy. Every existing `<AdSlot>` picks it up.
+
+**Next placements to consider once we have data:** dashboard between "Where your money went" and the Snowball nudge card (public site low-viewed page, so tricky), and settings-page bottom (very low value, low CTR). Both deferred until EthicalAds tells us where fill is strong.
 
 ### Phase 2 — V1.0 rollout (paywall split)
 

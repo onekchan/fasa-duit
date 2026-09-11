@@ -9,6 +9,7 @@ import {
   PiggyBank,
   Sparkles,
 } from "lucide-react";
+import { AdSlot } from "@/components/ads/AdSlot";
 
 /**
  * Public marketing landing. Server Component only (no client state) so it
@@ -28,6 +29,12 @@ export default function LandingPage() {
       <DashboardMockup />
       <TrustStrip />
       <Faq />
+      {/* Non-intrusive ad slot — public landing, above the footer, well below
+          the hero + CTA so the signup story stays clean. Visible to anonymous
+          visitors too, so we count impressions from the start. */}
+      <div className="mx-auto max-w-[1120px] px-6 md:px-10">
+        <AdSlot slotId="landing-above-footer" placeholderLabel="Ad space · above footer" />
+      </div>
       <Footer />
     </>
   );

@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MoneyInput, Select, TextInput } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
+import { AdSlot } from "@/components/ads/AdSlot";
 import {
   addTransaction,
   deleteTransaction,
@@ -525,6 +526,11 @@ export function TransactionsClient({
           </div>
         </>
       )}
+
+      {/* Non-intrusive ad slot — below the last ledger row, above the toast
+          region + bottom tab bar. Never above-the-fold. Hidden entirely for
+          Premium users once the subscription tier ships. */}
+      {!isEmpty && <AdSlot slotId="txn-below-ledger" placeholderLabel="Ad space · below ledger" />}
 
       {/* Toast region */}
       <div className="pointer-events-none fixed bottom-4 left-1/2 z-30 flex -translate-x-1/2 flex-col gap-2">

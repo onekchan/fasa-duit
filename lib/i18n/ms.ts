@@ -12,6 +12,17 @@ export const ms = {
     debts: "Hutang",
     settings: "Tetapan",
   },
+  // Abbreviated forms used ONLY inside the mobile bottom tab bar. Keep every
+  // value under ~7 characters — "Utama" (home), "Log" (borrowed), "Ulang"
+  // (short for berulang), etc.
+  tabsShort: {
+    dashboard: "Utama",
+    transactions: "Log",
+    recurring: "Ulang",
+    funds: "Tabung",
+    debts: "Hutang",
+    settings: "Lagi",
+  },
   common: {
     save: "Simpan",
     cancel: "Batal",
@@ -400,5 +411,125 @@ export const ms = {
     deletedToast: "Berulang dipadam",
     savedToast: "Berulang disimpan",
     postedToast: "Transaksi di-post",
+  },
+  auth: {
+    login: {
+      title: "Selamat kembali",
+      sub: "Log masuk ke FASA Duit.",
+      email: "E-mel",
+      password: "Kata laluan",
+      submit: "Log masuk",
+      submitting: "Sedang log masuk…",
+      newHere: "Belum ada akaun?",
+      signupLink: "Daftar",
+    },
+    signup: {
+      title: "Mula FASA Duit",
+      sub: "Beta terbuka percuma. Data anda kekal milik anda.",
+      email: "E-mel",
+      password: "Kata laluan",
+      passwordHint: "Sekurang-kurangnya 8 aksara.",
+      submit: "Cipta akaun",
+      submitting: "Sedang cipta akaun…",
+      already: "Sudah ada akaun?",
+      loginLink: "Log masuk",
+      confirmTitle: "Semak e-mel anda",
+      confirmBody:
+        "Kami telah hantar pautan pengesahan. Klik untuk selesaikan pendaftaran, kemudian kembali dan log masuk.",
+    },
+  },
+  landing: {
+    topnav: { login: "Log masuk", signup: "Mula percuma" },
+    hero: {
+      badge: "Dibuat untuk Malaysia — beta terbuka percuma",
+      headlinePart1: "Pengesan belanjawan yang mesra dan tenang untuk kehidupan ",
+      headlineHighlight: "Ringgit dahulu",
+      headlinePart2: ".",
+      sub:
+        "50/30/20 sebagai lalai. Tabung untuk Hari Raya, Umrah, atau MacBook baru. Snowball lawan Avalanche untuk PTPTN dan kad kredit. Bahasa Inggeris dan Bahasa Malaysia. Semua dalam RM, semua dalam poket anda.",
+      ctaStart: "Mula percuma",
+      ctaLogin: "Log masuk",
+      dataNote:
+        "Data anda kekal di Singapura (ap-southeast-1) dan milik anda. Tiada dijual, tiada dikongsi.",
+      artNeeds: "Keperluan",
+      artWants: "Kehendak",
+      artSavings: "Simpanan",
+    },
+    features: {
+      heading: "Semua yang anda perlukan. Tiada yang berlebihan.",
+      sub:
+        "Empat modul — dan bar sisi penuh dengan sentuhan kecil yang menjadikan log harian rasa seperti hobi, bukan tugas.",
+      f1Title: "50/30/20 yang sesuai untuk hidup di KL",
+      f1Body:
+        "Keperluan, Kehendak, Simpanan & Hutang — pantau semua dengan satu pandangan, ubah nisbah pada bulan mahal, dan lihat berapa banyak baki yang tinggal.",
+      f2Title: "Tabung simpanan untuk matlamat sebenar",
+      f2Body:
+        "Hari Raya 2027. Umrah. Bayi. MacBook baru. Tetapkan sasaran dan tarikh, log sumbangan, dan tahu tepat berapa perlu setiap bulan untuk kekal atas jadual.",
+      f3Title: "Snowball lawan Avalanche untuk hutang",
+      f3Body:
+        "PTPTN, kad kredit, pinjaman ASB — lihat kedua-dua strategi bayaran bersebelahan, seret slider untuk lihat 'macam mana kalau saya bayar tambahan RM 500', dan pilih pemenang.",
+      f4Title: "Bank Malaysia + e-Dompet",
+      f4Body:
+        "Maybank, CIMB, Public, RHB, Hong Leong, Bank Islam, dan setiap e-dompet utama — TnG, MAE, Boost, GrabPay, ShopeePay — sekali ketik semasa pengenalan.",
+    },
+    mockup: {
+      heading: "Satu papan pemuka mesra. Semuanya kelihatan.",
+      sub:
+        "Meter 50/30/20 di atas. Peringatan tabung simpanan seterusnya. Kemudian donat pengagihan dan peniaga teratas — ketik mana-mana bahagian untuk melihat transaksi di sebaliknya.",
+      thisMonth: "Bulan ini",
+      daysLeft: "21 hari lagi",
+      needs: "Keperluan",
+      wants: "Kehendak",
+      savings: "Simpanan & Hutang",
+      spentNeeds: "RM 506.20 dibelanja",
+      spentWants: "RM 137.30 dibelanja",
+      spentSavings: "RM 500.00 dibelanja",
+      used: "digunakan",
+      hariRayaName: "Hari Raya 2027",
+      hariRayaNudge: "Sumbang RM 454.55 bulan ini untuk kekal atas jadual.",
+      whereMoneyWent: "Ke mana wang anda pergi",
+      thisMonthPill: "Bulan ini",
+      topMerchants: "Peniaga teratas",
+      totalSpent: "jumlah dibelanja",
+    },
+    trust: {
+      p1Title: "Ringgit dahulu",
+      p1Body: "Format RM 1,234.56 dari hari pertama.",
+      p2Title: "Inggeris + BM",
+      p2Body:
+        "Tukar antara Bahasa Inggeris dan Bahasa Malaysia — antara muka lengkap.",
+      p3Title: "Rantau Singapura",
+      p3Body: "Data berada di ap-southeast-1. Mesra PDPA.",
+      p4Title: "Milik anda",
+      p4Body: "Satu klik untuk eksport semua sebagai JSON.",
+    },
+    faq: {
+      heading: "Soalan lazim",
+      q1: "Berapa kosnya?",
+      a1:
+        "Percuma semasa kami dalam beta terbuka. Apabila kami lancar tahap berbayar, pengguna beta sedia ada kekal percuma untuk kitaran keluaran semasa. Tiada kejutan.",
+      q2: "Adakah ia sesuai untuk pekerja bebas dengan pendapatan tidak tetap?",
+      a2:
+        "Ya. Tetapkan pendapatan bulanan tipikal anda, dan ubah nisbah 50/30/20 semasa bulan susah. Tabung simpanan akan mengira semula 'perlu sebulan' secara automatik.",
+      q3: "Adakah anda menyokong kewangan Islam?",
+      a3:
+        "Ya. Tukar paparan Hutang ke mod Islamik — 'faedah' menjadi 'kadar keuntungan', hutang mendapat pil patuh Syariah, dan lajur Faedah dalam jadual amortisasi menjadi Keuntungan. Matematik sama, kerangka betul.",
+      q4: "Di mana data saya?",
+      a4:
+        "Postgres di Singapura (Supabase, ap-southeast-1). Setiap jadual mempunyai keselamatan peringkat baris supaya data anda terpisah dari pengguna lain di peringkat pangkalan data, bukan sekadar dalam aplikasi.",
+      q5: "Boleh saya eksport?",
+      a5:
+        "Satu klik. Tetapan → Data anda → Eksport sebagai JSON muat turun satu fail .json dengan setiap koleksi. Anda juga boleh tutup akaun sepenuhnya jika mahu — semua akan dipadam.",
+      ctaTitle: "Bersedia untuk mencuba?",
+      ctaSub: "Daftar dalam bawah 30 saat. Beta terbuka percuma.",
+      ctaBtn: "Mula percuma",
+    },
+    footer: {
+      tagline: "Dibuat untuk Malaysia.",
+      login: "Log masuk",
+      signup: "Daftar",
+      privacy: "Privasi",
+      terms: "Terma",
+    },
   },
 };

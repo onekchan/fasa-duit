@@ -10,56 +10,65 @@ import {
   Sparkles,
 } from "lucide-react";
 import { AdSlot } from "@/components/ads/AdSlot";
+import { LanguageToggle } from "@/components/app-shell/LanguageToggle";
+import { t as tByLang } from "@/lib/i18n";
+import { getLangFromCookies } from "@/lib/lang";
 
 /**
- * Public marketing landing. Server Component only (no client state) so it
- * prerenders on Vercel and stays fast. Copy leans Malaysian-first — Hari Raya,
- * PTPTN, EPF, Ringgit-first — so a KL professional lands and immediately feels
- * this app was made for them.
+ * Public marketing landing. Server Component that reads the `lang` cookie so
+ * anonymous visitors see the language they picked last time — no client-side
+ * hydration flip. Copy leans Malaysian-first — Hari Raya, PTPTN, EPF,
+ * Ringgit-first — so a KL professional lands and immediately feels this app
+ * was made for them.
  *
  * Design tokens are the same warm palette used inside the app, so the whole
  * page themes automatically in light and dark.
  */
-export default function LandingPage() {
+export default async function LandingPage() {
+  const lang = await getLangFromCookies();
+  const l = tByLang(lang).landing;
   return (
     <>
-      <TopNav />
-      <Hero />
-      <FeatureStrip />
-      <DashboardMockup />
-      <TrustStrip />
-      <Faq />
+      <TopNav strings={l} lang={lang} />
+      <Hero strings={l} />
+      <FeatureStrip strings={l} />
+      <DashboardMockup strings={l} />
+      <TrustStrip strings={l} />
+      <Faq strings={l} />
       {/* Non-intrusive ad slot — public landing, above the footer, well below
           the hero + CTA so the signup story stays clean. Visible to anonymous
           visitors too, so we count impressions from the start. */}
       <div className="mx-auto max-w-[1120px] px-6 md:px-10">
         <AdSlot slotId="landing-above-footer" placeholderLabel="Ad space · above footer" />
       </div>
-      <Footer />
+      <Footer strings={l} />
     </>
   );
 }
 
+type L = ReturnType<typeof tByLang>["landing"];
+
 // ─── Top nav ────────────────────────────────────────────────────────────────
-function TopNav() {
+function TopNav({ strings, lang }: { strings: L; lang: "en" | "ms" }) {
   return (
     <header className="sticky top-0 z-10 border-b border-divider/60 bg-bg/85 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
         <Link href="/" className="font-display text-xl font-bold text-brand">
           FASA Duit
         </Link>
         <nav className="flex items-center gap-2 text-sm font-semibold">
+          <LanguageToggle current={lang} variant="compact" />
           <Link
             href="/login"
-            className="rounded-lg px-4 py-2 text-ink transition-colors hover:bg-card"
+            className="hidden rounded-lg px-4 py-2 text-ink transition-colors hover:bg-card sm:inline"
           >
-            Log in
+            {strings.topnav.login}
           </Link>
           <Link
             href="/signup"
             className="rounded-lg bg-brand px-4 py-2 text-[color:#FFF6EC] shadow-sm transition hover:brightness-105"
           >
-            Start free
+            {strings.topnav.signup}
           </Link>
         </nav>
       </div>
@@ -68,66 +77,61 @@ function TopNav() {
 }
 
 // ─── Hero ────────────────────────────────────────────────────────────────────
-function Hero() {
+function Hero({ strings }: { strings: L }) {
+  const h = strings.hero;
   return (
     <section className="mx-auto max-w-6xl px-5 pt-10 sm:px-6 sm:pt-24">
       <div className="grid gap-12 lg:grid-cols-[1.15fr_1fr] lg:items-center">
         <div>
           <span className="inline-flex items-center gap-1.5 rounded-pill bg-brand/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-brand">
             <Sparkles className="h-3 w-3" aria-hidden="true" />
-            Made for Malaysia — free open beta
+            {h.badge}
           </span>
           <h1 className="mt-5 font-display text-[2.25rem] leading-[1.1] tracking-tight sm:text-5xl md:text-6xl">
-            A warm, calm budget tracker built for{" "}
-            <span className="text-brand">Ringgit-first</span> life.
+            {h.headlinePart1}
+            <span className="text-brand">{h.headlineHighlight}</span>
+            {h.headlinePart2}
           </h1>
-          <p className="mt-6 max-w-xl text-lg text-muted">
-            50/30/20 by default. Sinking funds for Hari Raya, Umrah, or a new
-            laptop. Snowball vs Avalanche for PTPTN and credit cards. English
-            and Bahasa Malaysia. All in RM, all in your pocket.
-          </p>
+          <p className="mt-6 max-w-xl text-lg text-muted">{h.sub}</p>
 
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href="/signup"
               className="inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-3 font-semibold text-[color:#FFF6EC] shadow-sm transition hover:brightness-105"
             >
-              Start free
+              {h.ctaStart}
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
             <Link
               href="/login"
               className="rounded-lg border border-divider px-5 py-3 font-semibold text-ink transition-colors hover:bg-card"
             >
-              Log in
+              {h.ctaLogin}
             </Link>
           </div>
 
-          <p className="mt-6 text-sm text-muted">
-            Your data stays in Singapore (ap-southeast-1) and belongs to you.
-            Nothing sold, nothing shared.
-          </p>
+          <p className="mt-6 text-sm text-muted">{h.dataNote}</p>
         </div>
 
         {/* Hero art — soft calm coins / bar-y motif done with just SVG + tokens */}
         <div className="relative">
-          <HeroArt />
+          <HeroArt strings={strings} />
         </div>
       </div>
     </section>
   );
 }
 
-function HeroArt() {
+function HeroArt({ strings }: { strings: L }) {
   return (
     <div className="relative aspect-square w-full max-w-[420px] mx-auto">
       <div className="absolute inset-0 rounded-[32%] bg-card" />
       <div className="absolute inset-6 rounded-[30%] bg-surface shadow-md" />
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="grid w-3/4 gap-4">
-          <FakeBar label="Needs" pct={40} tone="accent" />
-          <FakeBar label="Wants" pct={22} tone="warning" />
-          <FakeBar label="Savings" pct={65} tone="brand" />
+          <FakeBar label={strings.hero.artNeeds} pct={40} tone="accent" />
+          <FakeBar label={strings.hero.artWants} pct={22} tone="warning" />
+          <FakeBar label={strings.hero.artSavings} pct={65} tone="brand" />
         </div>
       </div>
     </div>
@@ -162,40 +166,20 @@ function FakeBar({
 }
 
 // ─── Features ────────────────────────────────────────────────────────────────
-function FeatureStrip() {
+function FeatureStrip({ strings }: { strings: L }) {
+  const f = strings.features;
   const items = [
-    {
-      icon: <BarChart3 className="h-5 w-5" />,
-      title: "50/30/20 that fits KL life",
-      body: "Needs, Wants, Savings & Debt — track them at a glance, override the split for high cost-of-living months, and see how much runway you have left.",
-    },
-    {
-      icon: <PiggyBank className="h-5 w-5" />,
-      title: "Sinking funds for real goals",
-      body: "Hari Raya 2027. Umrah. Baby. New MacBook. Set a target and date, log contributions, and know exactly how much per month to stay on pace.",
-    },
-    {
-      icon: <Coins className="h-5 w-5" />,
-      title: "Snowball vs Avalanche for debt",
-      body: "PTPTN, credit cards, ASB loans — see both payoff strategies side-by-side, drag a slider to see 'what if I threw an extra RM 500', and pick the winner.",
-    },
-    {
-      icon: <Landmark className="h-5 w-5" />,
-      title: "Malaysian banks + eWallets",
-      body: "Maybank, CIMB, Public, RHB, Hong Leong, Bank Islam, and every major eWallet — TnG, MAE, Boost, GrabPay, ShopeePay — one-tap during onboarding.",
-    },
+    { icon: <BarChart3 className="h-5 w-5" />, title: f.f1Title, body: f.f1Body },
+    { icon: <PiggyBank className="h-5 w-5" />, title: f.f2Title, body: f.f2Body },
+    { icon: <Coins className="h-5 w-5" />, title: f.f3Title, body: f.f3Body },
+    { icon: <Landmark className="h-5 w-5" />, title: f.f4Title, body: f.f4Body },
   ];
 
   return (
     <section className="mx-auto max-w-6xl px-5 py-16 sm:px-6 sm:py-24">
       <div className="mx-auto max-w-2xl text-center">
-        <h2 className="font-display text-3xl sm:text-4xl">
-          Everything you need. Nothing you don&apos;t.
-        </h2>
-        <p className="mt-3 text-muted">
-          Four modules — plus a sidebar full of small niceties that make daily
-          logging feel like a hobby, not a chore.
-        </p>
+        <h2 className="font-display text-3xl sm:text-4xl">{f.heading}</h2>
+        <p className="mt-3 text-muted">{f.sub}</p>
       </div>
 
       <div className="mt-12 grid gap-4 sm:grid-cols-2">
@@ -217,32 +201,27 @@ function FeatureStrip() {
 }
 
 // ─── Dashboard mockup ────────────────────────────────────────────────────────
-function DashboardMockup() {
+function DashboardMockup({ strings }: { strings: L }) {
+  const m = strings.mockup;
   return (
     <section className="border-y border-divider bg-card/40 py-16 sm:py-24">
       <div className="mx-auto max-w-6xl px-5 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="font-display text-3xl sm:text-4xl">
-            One warm dashboard. Everything visible.
-          </h2>
-          <p className="mt-3 text-muted">
-            50/30/20 meters at the top. Sinking-fund nudges next. Then the
-            distribution donut and top merchants — click any slice to see the
-            transactions behind it.
-          </p>
+          <h2 className="font-display text-3xl sm:text-4xl">{m.heading}</h2>
+          <p className="mt-3 text-muted">{m.sub}</p>
         </div>
 
         {/* Fake dashboard — mirrors the real one at a glance */}
         <div className="mx-auto mt-12 max-w-4xl rounded-card border border-divider bg-surface p-6 shadow-md">
           <div className="mb-4 flex items-baseline justify-between">
-            <div className="font-display text-2xl">This month</div>
-            <div className="text-xs text-muted">21 days left</div>
+            <div className="font-display text-2xl">{m.thisMonth}</div>
+            <div className="text-xs text-muted">{m.daysLeft}</div>
           </div>
 
           <div className="space-y-3">
-            <MockMeter label="Needs" spent="RM 506.20 spent" pct={20} />
-            <MockMeter label="Wants" spent="RM 137.30 spent" pct={9} />
-            <MockMeter label="Savings & Debt" spent="RM 500.00 spent" pct={50} />
+            <MockMeter label={m.needs} spent={m.spentNeeds} pct={20} usedLabel={m.used} />
+            <MockMeter label={m.wants} spent={m.spentWants} pct={9} usedLabel={m.used} />
+            <MockMeter label={m.savings} spent={m.spentSavings} pct={50} usedLabel={m.used} />
           </div>
 
           <div className="mt-5 flex items-center gap-3 rounded-card border border-divider bg-card px-4 py-3">
@@ -250,25 +229,23 @@ function DashboardMockup() {
               <PiggyBank className="h-4 w-4" />
             </div>
             <div className="text-sm">
-              <div className="font-semibold text-ink">Hari Raya 2027</div>
-              <div className="text-muted">
-                Contribute RM 454.55 this month to stay on pace.
-              </div>
+              <div className="font-semibold text-ink">{m.hariRayaName}</div>
+              <div className="text-muted">{m.hariRayaNudge}</div>
             </div>
           </div>
 
           <div className="mt-5 grid gap-4 sm:grid-cols-[1.4fr_1fr]">
             <div className="rounded-card border border-divider bg-card p-5">
               <div className="mb-3 flex items-baseline justify-between">
-                <div className="font-display text-lg">Where your money went</div>
+                <div className="font-display text-lg">{m.whereMoneyWent}</div>
                 <div className="rounded-lg border border-divider bg-surface px-2 py-1 text-[11px] font-semibold text-ink">
-                  This month
+                  {m.thisMonthPill}
                 </div>
               </div>
-              <MockDonut />
+              <MockDonut totalSpentLabel={m.totalSpent} />
             </div>
             <div className="rounded-card border border-divider bg-card p-5">
-              <div className="font-display text-lg">Top merchants</div>
+              <div className="font-display text-lg">{m.topMerchants}</div>
               <ul className="mt-3 flex flex-col gap-1.5 text-sm">
                 {[
                   ["ASNB", "RM 500.00"],
@@ -295,17 +272,19 @@ function MockMeter({
   label,
   spent,
   pct,
+  usedLabel,
 }: {
   label: string;
   spent: string;
   pct: number;
+  usedLabel: string;
 }) {
   return (
     <div>
-      <div className="mb-1 flex items-baseline justify-between">
+      <div className="mb-1 flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-2">
         <span className="font-semibold">{label}</span>
         <span className="text-xs text-muted">
-          {spent} · {pct}% used
+          {spent} · {pct}% {usedLabel}
         </span>
       </div>
       <div className="h-2 rounded-pill bg-divider">
@@ -319,7 +298,7 @@ function MockMeter({
 }
 
 /** Static SVG donut in the warm palette. Pure decoration. */
-function MockDonut() {
+function MockDonut({ totalSpentLabel }: { totalSpentLabel: string }) {
   const segments = [
     { color: "var(--brand)", pct: 40.5, label: "ASB / ASNB" },
     { color: "var(--accent)", pct: 24.3, label: "PTPTN" },
@@ -362,7 +341,7 @@ function MockDonut() {
           <div className="font-display text-lg font-semibold tabular-nums text-ink">
             RM 1,233
           </div>
-          <div className="text-[10px] text-muted">total spent</div>
+          <div className="text-[10px] text-muted">{totalSpentLabel}</div>
         </div>
       </div>
       <div className="flex flex-col gap-1 text-xs">
@@ -385,12 +364,12 @@ function MockDonut() {
 }
 
 // ─── Trust ───────────────────────────────────────────────────────────────────
-function TrustStrip() {
+function TrustStrip({ strings }: { strings: L }) {
   const points = [
-    { title: "Ringgit-first", body: "RM 1,234.56 formatting from day one." },
-    { title: "English + BM", body: "Toggle between English and Bahasa Malaysia — complete UI." },
-    { title: "Singapore region", body: "Data lives in ap-southeast-1. PDPA-aware." },
-    { title: "Yours to own", body: "One click to export everything as JSON." },
+    { title: strings.trust.p1Title, body: strings.trust.p1Body },
+    { title: strings.trust.p2Title, body: strings.trust.p2Body },
+    { title: strings.trust.p3Title, body: strings.trust.p3Body },
+    { title: strings.trust.p4Title, body: strings.trust.p4Body },
   ];
   return (
     <section className="mx-auto max-w-6xl px-5 py-16 sm:px-6 sm:py-24">
@@ -410,33 +389,19 @@ function TrustStrip() {
 }
 
 // ─── FAQ ─────────────────────────────────────────────────────────────────────
-function Faq() {
+function Faq({ strings }: { strings: L }) {
+  const f = strings.faq;
   const items = [
-    {
-      q: "How much does it cost?",
-      a: "Free while we're in open beta. Once we launch a paid tier, existing beta users keep everything free for the current release cycle. No surprises.",
-    },
-    {
-      q: "Does it work for freelancers with irregular income?",
-      a: "Yes. Set your typical monthly take-home, and override the 50/30/20 split during rough months. Sinking funds recalculate 'required per month' automatically.",
-    },
-    {
-      q: "Do you support Islamic finance?",
-      a: "Yes. Flip the Debts view to Islamic mode — 'interest' becomes 'profit rate', debts get a Shariah-aligned pill, and the amortisation table's Interest column becomes Profit. Same math, correct framing.",
-    },
-    {
-      q: "Where is my data?",
-      a: "Postgres in Singapore (Supabase, ap-southeast-1). Every table has row-level security so your data is walled off from other users at the database level, not just in the app.",
-    },
-    {
-      q: "Can I export it?",
-      a: "One click. Settings → Your data → Export as JSON downloads a single .json file with every collection. You can also close your account entirely if you'd like — everything gets deleted.",
-    },
+    { q: f.q1, a: f.a1 },
+    { q: f.q2, a: f.a2 },
+    { q: f.q3, a: f.a3 },
+    { q: f.q4, a: f.a4 },
+    { q: f.q5, a: f.a5 },
   ];
   return (
     <section className="border-t border-divider bg-card/40 py-16 sm:py-24">
       <div className="mx-auto max-w-3xl px-5 sm:px-6">
-        <h2 className="font-display text-3xl sm:text-4xl">Common questions</h2>
+        <h2 className="font-display text-3xl sm:text-4xl">{f.heading}</h2>
         <div className="mt-8 flex flex-col divide-y divide-divider">
           {items.map((it) => (
             <div key={it.q} className="py-5">
@@ -449,16 +414,14 @@ function Faq() {
         <div className="mt-10 flex flex-wrap items-center gap-3 rounded-card border border-divider bg-surface p-6 shadow-sm">
           <LineChart className="h-6 w-6 text-brand" aria-hidden="true" />
           <div className="flex-1">
-            <div className="font-display text-lg">Ready to give it a run?</div>
-            <div className="text-sm text-muted">
-              Sign up in under 30 seconds. Free open beta.
-            </div>
+            <div className="font-display text-lg">{f.ctaTitle}</div>
+            <div className="text-sm text-muted">{f.ctaSub}</div>
           </div>
           <Link
             href="/signup"
             className="rounded-lg bg-brand px-5 py-3 font-semibold text-[color:#FFF6EC] shadow-sm transition hover:brightness-105"
           >
-            Start free
+            {f.ctaBtn}
           </Link>
         </div>
       </div>
@@ -467,25 +430,26 @@ function Faq() {
 }
 
 // ─── Footer ──────────────────────────────────────────────────────────────────
-function Footer() {
+function Footer({ strings }: { strings: L }) {
+  const f = strings.footer;
   return (
     <footer className="border-t border-divider bg-bg">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-8 text-sm text-muted">
         <div>
-          © {new Date().getFullYear()} FASA Duit · Made for Malaysia.
+          © {new Date().getFullYear()} FASA Duit · {f.tagline}
         </div>
         <div className="flex flex-wrap gap-5">
           <Link href="/login" className="hover:text-ink">
-            Log in
+            {f.login}
           </Link>
           <Link href="/signup" className="hover:text-ink">
-            Sign up
+            {f.signup}
           </Link>
           <a href="#privacy" className="hover:text-ink" aria-disabled>
-            Privacy
+            {f.privacy}
           </a>
           <a href="#terms" className="hover:text-ink" aria-disabled>
-            Terms
+            {f.terms}
           </a>
           <a href="mailto:hello@fasa.duit" className="hover:text-ink">
             hello@fasa.duit

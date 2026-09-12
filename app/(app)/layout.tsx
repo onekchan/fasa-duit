@@ -5,6 +5,8 @@ import { BottomTabBar } from "@/components/app-shell/BottomTabBar";
 import { SideNav } from "@/components/app-shell/SideNav";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { ThemeApplier } from "@/components/app-shell/ThemeApplier";
+import { LanguageToggle } from "@/components/app-shell/LanguageToggle";
+import { t as tByLang, type Language } from "@/lib/i18n";
 
 /**
  * Authenticated app shell. Middleware already redirects unauthenticated
@@ -21,14 +23,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!user) redirect("/login");
 
   // Read the user's saved theme so ThemeApplier can stamp `data-theme` on
-  // <html>. "system" (or a fetch failure) leaves the attribute alone so
-  // prefers-color-scheme wins.
+  // <html>, and language so the top-bar toggle + shell strings show the right
+  // catalog. "system"/"en" (or a fetch failure) leaves the attribute alone
+  // and English respectively.
   const { data: profile } = await supabase
     .from("profiles")
-    .select("theme")
+    .select("theme, language")
     .eq("user_id", user.id)
     .single();
   const theme = ((profile?.theme as "system" | "light" | "dark" | undefined) ?? "system");
+  const lang = ((profile?.language as Language | undefined) ?? "en");
+  const strings = tByLang(lang);
 
   return (
     <div className="min-h-screen md:pl-[220px]">
@@ -41,31 +46,40 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="flex items-center justify-between">
           <div className="font-display text-xl font-bold text-brand">FASA Duit</div>
         </div>
-        <SideNav />
-        <form action={logout} className="mt-auto">
-          <SubmitButton
-            variant="ghost"
-            className="w-full !border-divider !text-muted"
-            loadingLabel="Signing out…"
-          >
-            Log out
-          </SubmitButton>
-        </form>
+        <SideNav lang={lang} />
+        <div className="mt-auto flex flex-col gap-3">
+          {/* Language toggle above the log-out button so it's always in reach
+              without going into Settings. Uses the profile language so the
+              current pill is correct on load. */}
+          <LanguageToggle current={lang} className="self-start" />
+          <form action={logout}>
+            <SubmitButton
+              variant="ghost"
+              className="w-full !border-divider !text-muted"
+              loadingLabel={strings.common.saving}
+            >
+              {strings.common.logout}
+            </SubmitButton>
+          </form>
+        </div>
       </aside>
 
-      {/* Mobile-only top bar: brand + log-out so users can still reach it
-          without the desktop sidebar. Hidden on desktop. */}
-      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-divider bg-bg/85 px-4 py-3 backdrop-blur md:hidden">
+      {/* Mobile-only top bar: brand + language toggle + log-out so users can
+          still reach both without the desktop sidebar. Hidden on desktop. */}
+      <header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-divider bg-bg/85 px-3 py-3 backdrop-blur md:hidden">
         <div className="font-display text-lg font-bold text-brand">FASA Duit</div>
-        <form action={logout}>
-          <SubmitButton
-            variant="ghost"
-            className="!py-1.5 !text-sm !text-muted"
-            loadingLabel="…"
-          >
-            Log out
-          </SubmitButton>
-        </form>
+        <div className="flex items-center gap-2">
+          <LanguageToggle current={lang} variant="compact" />
+          <form action={logout}>
+            <SubmitButton
+              variant="ghost"
+              className="!px-2 !py-1.5 !text-sm !text-muted"
+              loadingLabel="…"
+            >
+              {strings.common.logout}
+            </SubmitButton>
+          </form>
+        </div>
       </header>
 
       {/* Main content. Extra bottom padding on mobile so the bottom tab bar
@@ -74,7 +88,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="mx-auto max-w-[1120px]">{children}</div>
       </main>
 
-      <BottomTabBar />
+      <BottomTabBar lang={lang} />
     </div>
   );
 }

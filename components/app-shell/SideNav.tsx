@@ -11,6 +11,7 @@ import {
   Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { t as tByLang, type Language } from "@/lib/i18n";
 
 /**
  * Desktop sidebar nav (client component so it can highlight the active route
@@ -21,22 +22,27 @@ import { cn } from "@/lib/utils";
  * inset ring so the item reads as "you are here" without shouting. The icon
  * flips to the brand color too. Everything else stays muted with a subtle
  * hover.
+ *
+ * Labels come from the i18n catalog (`tabs.*`) so BM ↔ EN swap is one prop.
+ * The parent app layout passes the current language; the toggle in the sidebar
+ * calls the server action which revalidates the tree and re-renders this
+ * component with the new prop.
  */
-const items: Array<{
-  href: string;
-  label: string;
-  Icon: React.ComponentType<{ className?: string }>;
-}> = [
-  { href: "/dashboard", label: "Dashboard", Icon: BarChart3 },
-  { href: "/transactions", label: "Transactions", Icon: Receipt },
-  { href: "/recurring", label: "Recurring", Icon: Repeat },
-  { href: "/funds", label: "Funds", Icon: PiggyBank },
-  { href: "/debts", label: "Debts", Icon: Coins },
-  { href: "/settings", label: "Settings", Icon: Settings },
-];
-
-export function SideNav() {
+export function SideNav({ lang = "en" }: { lang?: Language }) {
   const path = usePathname();
+  const tabs = tByLang(lang).tabs;
+  const items: Array<{
+    href: string;
+    label: string;
+    Icon: React.ComponentType<{ className?: string }>;
+  }> = [
+    { href: "/dashboard", label: tabs.dashboard, Icon: BarChart3 },
+    { href: "/transactions", label: tabs.transactions, Icon: Receipt },
+    { href: "/recurring", label: tabs.recurring, Icon: Repeat },
+    { href: "/funds", label: tabs.funds, Icon: PiggyBank },
+    { href: "/debts", label: tabs.debts, Icon: Coins },
+    { href: "/settings", label: tabs.settings, Icon: Settings },
+  ];
   return (
     <nav aria-label="primary" className="flex flex-col gap-1">
       {items.map(({ href, label, Icon }) => {

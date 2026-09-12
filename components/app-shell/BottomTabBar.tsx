@@ -4,28 +4,31 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BarChart3, Coins, PiggyBank, Receipt, Repeat, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { t as tByLang, type Language } from "@/lib/i18n";
 
 /**
  * Mobile-only bottom tab bar. Hidden at md+ where the fixed sidebar takes over.
- * 5 equally-spaced tabs with icon + label; the active one is terracotta. The
+ * 6 equally-spaced tabs with icon + label; the active one is terracotta. The
  * bar is a client component because it uses usePathname to highlight the
  * current route.
+ *
+ * Labels come from `tabsShort` in the i18n catalog — short forms because at
+ * 375px each tab is ~62px wide and full labels ("Papan Pemuka", "Transactions",
+ * "Recurring") would wrap to two lines and break the fixed bar height.
  *
  * A single fixed footer respects iOS safe-area (env(safe-area-inset-bottom))
  * so the icons don't disappear behind the iPhone home indicator.
  */
-export function BottomTabBar() {
+export function BottomTabBar({ lang = "en" }: { lang?: Language }) {
   const path = usePathname();
-  // 6 tabs — grid-cols-6. At 375px this leaves ~62px per tab, comfortably wide
-  // enough for a 20px icon + 11px label. "Recur." is abbreviated so the wider
-  // "Recurring" label doesn't force a two-line wrap.
+  const short = tByLang(lang).tabsShort;
   const tabs: Array<{ href: string; label: string; Icon: React.ComponentType<{ className?: string }> }> = [
-    { href: "/dashboard", label: "Home", Icon: BarChart3 },
-    { href: "/transactions", label: "Log", Icon: Receipt },
-    { href: "/recurring", label: "Recur.", Icon: Repeat },
-    { href: "/funds", label: "Funds", Icon: PiggyBank },
-    { href: "/debts", label: "Debts", Icon: Coins },
-    { href: "/settings", label: "More", Icon: Settings },
+    { href: "/dashboard", label: short.dashboard, Icon: BarChart3 },
+    { href: "/transactions", label: short.transactions, Icon: Receipt },
+    { href: "/recurring", label: short.recurring, Icon: Repeat },
+    { href: "/funds", label: short.funds, Icon: PiggyBank },
+    { href: "/debts", label: short.debts, Icon: Coins },
+    { href: "/settings", label: short.settings, Icon: Settings },
   ];
   return (
     <nav

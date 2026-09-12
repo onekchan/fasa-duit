@@ -1,27 +1,36 @@
 import Link from "next/link";
 import { login } from "./actions";
 import { SubmitButton } from "@/components/ui/SubmitButton";
+import { LanguageToggle } from "@/components/app-shell/LanguageToggle";
+import { getLangFromCookies } from "@/lib/lang";
+import { t as tByLang } from "@/lib/i18n";
 
 /**
- * Login page. Server component + a Server Action for the submit.
- * Design pass lands in a later slice; scaffold shape only.
+ * Login page. Server component + a Server Action for the submit. Reads the
+ * `lang` cookie so a visitor coming from the BM landing keeps their language
+ * through the auth flow.
  */
-export default function LoginPage({
+export default async function LoginPage({
   searchParams,
 }: {
   searchParams: Promise<{ next?: string; error?: string }>;
 }) {
+  const lang = await getLangFromCookies();
+  const s = tByLang(lang).auth.login;
   return (
     <main className="mx-auto max-w-md px-6 py-16">
-      <h1 className="font-display text-3xl">Welcome back</h1>
-      <p className="mt-2 text-muted">Sign in to FASA Duit.</p>
+      <div className="mb-6 flex justify-end">
+        <LanguageToggle current={lang} variant="compact" />
+      </div>
+      <h1 className="font-display text-3xl">{s.title}</h1>
+      <p className="mt-2 text-muted">{s.sub}</p>
 
-      <LoginForm searchParamsPromise={searchParams} />
+      <LoginForm searchParamsPromise={searchParams} strings={s} />
 
       <p className="mt-6 text-sm text-muted">
-        Don&apos;t have an account?{" "}
+        {s.newHere}{" "}
         <Link href="/signup" className="font-semibold text-brand underline underline-offset-2">
-          Sign up
+          {s.signupLink}
         </Link>
       </p>
     </main>
@@ -30,8 +39,10 @@ export default function LoginPage({
 
 async function LoginForm({
   searchParamsPromise,
+  strings,
 }: {
   searchParamsPromise: Promise<{ next?: string; error?: string }>;
+  strings: ReturnType<typeof tByLang>["auth"]["login"];
 }) {
   const sp = await searchParamsPromise;
   return (
@@ -39,7 +50,7 @@ async function LoginForm({
       <input type="hidden" name="next" value={sp.next ?? "/dashboard"} />
 
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-semibold">Email</span>
+        <span className="text-sm font-semibold">{strings.email}</span>
         <input
           name="email"
           type="email"
@@ -49,7 +60,7 @@ async function LoginForm({
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-semibold">Password</span>
+        <span className="text-sm font-semibold">{strings.password}</span>
         <input
           name="password"
           type="password"
@@ -61,8 +72,8 @@ async function LoginForm({
 
       {sp.error && <p className="text-sm text-danger">{sp.error}</p>}
 
-      <SubmitButton className="mt-2 !py-2.5" loadingLabel="Signing in…">
-        Sign in
+      <SubmitButton className="mt-2 !py-2.5" loadingLabel={strings.submitting}>
+        {strings.submit}
       </SubmitButton>
     </form>
   );

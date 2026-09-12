@@ -12,6 +12,17 @@ export const en = {
     debts: "Debts",
     settings: "Settings",
   },
+  // Abbreviated forms used ONLY inside the mobile bottom tab bar (~62px per
+  // tab at 375px). Keep every value under ~7 characters or the label wraps
+  // to two lines and breaks the bar height.
+  tabsShort: {
+    dashboard: "Home",
+    transactions: "Log",
+    recurring: "Recur.",
+    funds: "Funds",
+    debts: "Debts",
+    settings: "More",
+  },
   common: {
     save: "Save",
     cancel: "Cancel",
@@ -400,5 +411,125 @@ export const en = {
     deletedToast: "Recurring deleted",
     savedToast: "Recurring saved",
     postedToast: "Transaction posted",
+  },
+  auth: {
+    login: {
+      title: "Welcome back",
+      sub: "Sign in to FASA Duit.",
+      email: "Email",
+      password: "Password",
+      submit: "Sign in",
+      submitting: "Signing in…",
+      newHere: "Don’t have an account?",
+      signupLink: "Sign up",
+    },
+    signup: {
+      title: "Start FASA Duit",
+      sub: "Free open beta. Your data stays yours.",
+      email: "Email",
+      password: "Password",
+      passwordHint: "At least 8 characters.",
+      submit: "Create account",
+      submitting: "Creating account…",
+      already: "Already have an account?",
+      loginLink: "Log in",
+      confirmTitle: "Check your email",
+      confirmBody:
+        "We sent you a confirmation link. Click it to finish setting up your account, then come back and log in.",
+    },
+  },
+  landing: {
+    topnav: { login: "Log in", signup: "Start free" },
+    hero: {
+      badge: "Made for Malaysia — free open beta",
+      headlinePart1: "A warm, calm budget tracker built for ",
+      headlineHighlight: "Ringgit-first",
+      headlinePart2: " life.",
+      sub:
+        "50/30/20 by default. Sinking funds for Hari Raya, Umrah, or a new laptop. Snowball vs Avalanche for PTPTN and credit cards. English and Bahasa Malaysia. All in RM, all in your pocket.",
+      ctaStart: "Start free",
+      ctaLogin: "Log in",
+      dataNote:
+        "Your data stays in Singapore (ap-southeast-1) and belongs to you. Nothing sold, nothing shared.",
+      artNeeds: "Needs",
+      artWants: "Wants",
+      artSavings: "Savings",
+    },
+    features: {
+      heading: "Everything you need. Nothing you don’t.",
+      sub:
+        "Four modules — plus a sidebar full of small niceties that make daily logging feel like a hobby, not a chore.",
+      f1Title: "50/30/20 that fits KL life",
+      f1Body:
+        "Needs, Wants, Savings & Debt — track them at a glance, override the split for high cost-of-living months, and see how much runway you have left.",
+      f2Title: "Sinking funds for real goals",
+      f2Body:
+        "Hari Raya 2027. Umrah. Baby. New MacBook. Set a target and date, log contributions, and know exactly how much per month to stay on pace.",
+      f3Title: "Snowball vs Avalanche for debt",
+      f3Body:
+        "PTPTN, credit cards, ASB loans — see both payoff strategies side-by-side, drag a slider to see 'what if I threw an extra RM 500', and pick the winner.",
+      f4Title: "Malaysian banks + eWallets",
+      f4Body:
+        "Maybank, CIMB, Public, RHB, Hong Leong, Bank Islam, and every major eWallet — TnG, MAE, Boost, GrabPay, ShopeePay — one-tap during onboarding.",
+    },
+    mockup: {
+      heading: "One warm dashboard. Everything visible.",
+      sub:
+        "50/30/20 meters at the top. Sinking-fund nudges next. Then the distribution donut and top merchants — click any slice to see the transactions behind it.",
+      thisMonth: "This month",
+      daysLeft: "21 days left",
+      needs: "Needs",
+      wants: "Wants",
+      savings: "Savings & Debt",
+      spentNeeds: "RM 506.20 spent",
+      spentWants: "RM 137.30 spent",
+      spentSavings: "RM 500.00 spent",
+      used: "used",
+      hariRayaName: "Hari Raya 2027",
+      hariRayaNudge: "Contribute RM 454.55 this month to stay on pace.",
+      whereMoneyWent: "Where your money went",
+      thisMonthPill: "This month",
+      topMerchants: "Top merchants",
+      totalSpent: "total spent",
+    },
+    trust: {
+      p1Title: "Ringgit-first",
+      p1Body: "RM 1,234.56 formatting from day one.",
+      p2Title: "English + BM",
+      p2Body:
+        "Toggle between English and Bahasa Malaysia — complete UI.",
+      p3Title: "Singapore region",
+      p3Body: "Data lives in ap-southeast-1. PDPA-aware.",
+      p4Title: "Yours to own",
+      p4Body: "One click to export everything as JSON.",
+    },
+    faq: {
+      heading: "Common questions",
+      q1: "How much does it cost?",
+      a1:
+        "Free while we're in open beta. Once we launch a paid tier, existing beta users keep everything free for the current release cycle. No surprises.",
+      q2: "Does it work for freelancers with irregular income?",
+      a2:
+        "Yes. Set your typical monthly take-home, and override the 50/30/20 split during rough months. Sinking funds recalculate 'required per month' automatically.",
+      q3: "Do you support Islamic finance?",
+      a3:
+        "Yes. Flip the Debts view to Islamic mode — 'interest' becomes 'profit rate', debts get a Shariah-aligned pill, and the amortisation table's Interest column becomes Profit. Same math, correct framing.",
+      q4: "Where is my data?",
+      a4:
+        "Postgres in Singapore (Supabase, ap-southeast-1). Every table has row-level security so your data is walled off from other users at the database level, not just in the app.",
+      q5: "Can I export it?",
+      a5:
+        "One click. Settings → Your data → Export as JSON downloads a single .json file with every collection. You can also close your account entirely if you'd like — everything gets deleted.",
+      ctaTitle: "Ready to give it a run?",
+      ctaSub: "Sign up in under 30 seconds. Free open beta.",
+      ctaBtn: "Start free",
+    },
+    footer: {
+      tagline: "Made for Malaysia.",
+      login: "Log in",
+      signup: "Sign up",
+      privacy: "Privacy",
+      terms: "Terms",
+    },
   },
 };

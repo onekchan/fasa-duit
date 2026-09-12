@@ -186,19 +186,29 @@ Every screen must look right at **375 × 812** (iPhone SE / 13 mini floor). Use 
 
 ### 4. Production E2E smoke (mandatory after a deploy)
 
-After every push to `main`, once Vercel says "Ready", walk through the golden path on the live URL from an incognito window:
+**Standing test account** — always use this for E2E on production. Do NOT create a new signup on every session; the shared account already has sample data, at least one debt, one recurring template, and one sinking fund from earlier passes, so you can jump straight to the smoke steps below.
 
-1. Sign up as a fresh user → land on `/onboarding`
-2. Walk the 4-step wizard — income, currency, accounts, categories → land on `/dashboard`
-3. Add one transaction via QuickAdd → verify it appears in the ledger and the dashboard's 50/30/20 meters move
-4. Visit `/recurring` → add one monthly template → verify it appears; hit "Post now" → verify a transaction lands on `/transactions`
-5. Visit `/funds` → create one sinking fund → log one contribution → verify the progress bar moves
-6. Visit `/debts` → add one debt → verify the Snowball vs Avalanche comparator renders
-7. Visit `/settings` → toggle language EN↔BM → verify every visible string swaps
-8. Log out → the login page should render, not throw
-9. Log back in → all data intact
+```
+email:    test@fasa.local
+password: password123
+```
+
+The `.local` TLD is intentional — it can't receive real email, so nothing about the account is linkable to a person. Password is documented in the clear on purpose (this account owns nothing real; there is no threat model where its credentials matter). If Supabase ever forces email confirmation on this project, sign up once via the dashboard's `auth.users` insert instead of the signup flow. If the account is missing after a data-wipe test, sign it up again with the same credentials so the next session finds it.
+
+After every push to `main`, once Vercel says "Ready", sign in as this user and walk the golden path on the live URL:
+
+1. `/dashboard` — the 50/30/20 meters render, sample data is present
+2. `/transactions` — the ledger loads; add one new transaction via QuickAdd, verify it appears and the dashboard meters move
+3. `/recurring` — add one monthly template, hit "Post now", verify a transaction lands on `/transactions`
+4. `/funds` — log one contribution, verify the progress bar moves
+5. `/debts` — extra-payment slider works, both Snowball + Avalanche cards render, `RM` field shows the value as you drag
+6. `/settings` → toggle language EN↔BM, verify every visible string swaps
+7. Log out → the login page should render, not throw
+8. Log back in → all data intact
 
 Do this pass on **both** desktop viewport and 375×812 mobile — bugs specific to one usually show up here.
+
+**If you need to test the fresh-signup flow itself** (onboarding wizard, first-transaction empty state, welcome copy) — sign up a throwaway user with a timestamped local address like `test-<Date.now()>@fasa.local`, walk the wizard, then close the account via Settings → Data → Delete all so the shared `test@fasa.local` stays clean for the next session.
 
 ### 5. Cron endpoint verification (only when the cron code changes)
 

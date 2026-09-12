@@ -144,14 +144,39 @@ Don't run this yet — write it when we build Phase 2.
 
 | # | Slice | Why | Blocked on |
 | --- | --- | --- | --- |
-| 1 | **CSV import/export** | Data portability = PDPA-friendly + power-user unlock | — |
-| 2 | **Budget alerts** | Passive engagement between visits | Edge Function cron pattern |
-| 3 | **BM landing page** | Currently only `/` is EN — BM users bounce | — |
-| 4 | **Custom domain** | `fasa.my` reads better than `fasa-duit-pink.vercel.app` | Domain purchase + DNS |
-| 5 | **`/demo` sandbox** | Closes the "no-sign-up value" UX gap | Signed-cookie session pattern |
-| 6 | **Per-debt `is_islamic` flag** | Mixed conventional + Islamic portfolios need per-row labels | Small migration |
-| 7 | **Receipt OCR** | Big Premium differentiator | Choose OCR vendor |
-| 8 | **Phase 2 subscription infra** | Business-model launch | Stripe + Billplz setup |
+| 1 | **Enable Supabase email confirmation** | Malaysian financial users expect it; trust upgrade. Code side already wired — one dashboard toggle. | User action in Supabase dashboard |
+| 2 | **Add "Resend confirmation email" button on signup success** | Users who miss the email have no way back. Uses `supabase.auth.resend` behind a 60s cooldown. | Slice #1 done first |
+| 3 | **Wire Resend as SMTP for Supabase Auth** | Supabase default sender lands in spam ~40% and rate-limits at 4/hr. Resend fixes both. | Slice #5 (custom domain) |
+| 4 | **CSV import/export** | Data portability = PDPA-friendly + power-user unlock | — |
+| 5 | **Custom domain (`fasa.my`)** | Trust + shareability + unblocks EthicalAds + Resend + real email addresses. | Domain purchase + DNS |
+| 6 | **Budget alerts** | Passive engagement between visits | Edge Function cron pattern |
+| 7 | ~~**BM landing page**~~ | ~~Currently only `/` is EN — BM users bounce~~ | ✅ Shipped 2026-09-12 |
+| 8 | **`/demo` sandbox** | Closes the "no-sign-up value" UX gap | Signed-cookie session pattern |
+| 9 | **Per-debt `is_islamic` flag** | Mixed conventional + Islamic portfolios need per-row labels | Small migration |
+| 10 | **Receipt OCR** | Big Premium differentiator | Choose OCR vendor |
+| 11 | **Phase 2 subscription infra** | Business-model launch | Stripe + Billplz setup |
+
+### Email + auth deliverability (slices #1–#3 details)
+
+**Fastest step (do first, 2 min, free):** Supabase Dashboard → `fasa-duit` project → **Authentication → Sign In / Providers → Email** → toggle **"Confirm email"** ON → Save.
+
+Code already handles the flow — `signup` action passes `emailRedirectTo: <origin>/auth/callback`, redirects to `/signup?sent=1` (shows "Check your email"), and the callback exchanges the confirmation code for a session and lands the user on `/dashboard`. No code change needed for #1.
+
+**After that flip:** `test@fasa.local` stays confirmed (grandfathered — created before the toggle). For new throwaway test users, go to **Authentication → Users** → click the user → **"Confirm user"** button — ~5 seconds per user.
+
+**Real deliverability (Resend SMTP, slice #3):** blocked on the custom domain. Once `fasa.my` is live:
+
+1. Sign up at https://resend.com (3,000/mo free).
+2. Verify the domain — Resend gives you DNS TXT records (SPF + DKIM) to paste into your registrar.
+3. Supabase → Project Settings → **Authentication → SMTP Settings** → enable custom SMTP:
+   ```
+   Host:     smtp.resend.com
+   Port:     465
+   Username: resend
+   Password: <Resend API key>
+   Sender:   noreply@fasa.my
+   ```
+4. Save. Every auth email — confirmation, password reset, magic link — now goes through Resend. No spam-folder problem, no 4/hr limit.
 
 ---
 
